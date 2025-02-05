@@ -11,16 +11,39 @@ export function registerRoutes(app: Express) {
   app.get("/api/assets/search", async (req, res) => {
     const { q } = req.query;
     if (!q || typeof q !== "string") {
-      return res.status(400).json({ message: "Query parameter 'q' required" });
+      return res.status(400).json({ 
+        message: "Query parameter 'q' required",
+        details: "Search query must be a non-empty string"
+      });
     }
 
     try {
       const results = await searchAssets(q);
-      console.log('Search results:', results); // Debug log
+      if (!results || results.length === 0) {
+        return res.status(404).json({ 
+          message: "No results found",
+          details: "The search returned no matching assets"
+        });
+      }
+
+      console.log('Search results:', { 
+        query: q,
+        resultCount: results.length,
+        firstResult: results[0]
+      });
+
       res.json(results);
     } catch (error) {
-      console.error("Search error:", error);
-      res.status(500).json({ message: "Failed to search assets" });
+      console.error("Search error:", {
+        query: q,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+
+      res.status(500).json({ 
+        message: "Failed to search assets",
+        details: error instanceof Error ? error.message : "Unknown error occurred"
+      });
     }
   });
 

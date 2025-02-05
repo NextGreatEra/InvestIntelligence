@@ -5,7 +5,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function searchAssets(query: string) {
   try {
-    await delay(1000);
+    await delay(1000); // Add delay to respect rate limits
     const response = await fetch(
       `${COINGECKO_API}/search?query=${encodeURIComponent(query)}`,
       { 
