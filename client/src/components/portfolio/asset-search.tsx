@@ -58,7 +58,9 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
                         current_price: data.price
                       });
                     })
-                    .catch(console.error);
+                    .catch(error => {
+                      console.error('Error fetching price:', error);
+                    });
                 }}
               >
                 <span className="font-medium">{asset.symbol}</span>
