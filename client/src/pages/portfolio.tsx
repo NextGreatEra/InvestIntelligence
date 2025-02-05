@@ -70,6 +70,16 @@ export default function Portfolio() {
       return;
     }
 
+    const numericQuantity = parseFloat(quantity);
+    if (isNaN(numericQuantity) || numericQuantity <= 0) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid quantity greater than 0",
+        variant: "destructive",
+      });
+      return;
+    }
+
     addAssetMutation.mutate({
       symbol: selectedAsset.symbol,
       name: selectedAsset.name,
@@ -106,19 +116,21 @@ export default function Portfolio() {
                   </div>
                   <Input
                     type="number"
-                    placeholder="Quantity"
+                    min="0"
+                    step="any"
+                    placeholder="Enter quantity"
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value)}
                   />
+                  <Button
+                    onClick={handleAddAsset}
+                    disabled={!selectedAsset || !quantity || addAssetMutation.isPending}
+                    className="w-full"
+                  >
+                    {addAssetMutation.isPending ? "Adding..." : "Add to Portfolio"}
+                  </Button>
                 </div>
               )}
-              <Button
-                onClick={handleAddAsset}
-                disabled={!selectedAsset || !quantity || addAssetMutation.isPending}
-                className="w-full"
-              >
-                {addAssetMutation.isPending ? "Adding..." : "Add to Portfolio"}
-              </Button>
             </div>
           </DialogContent>
         </Dialog>

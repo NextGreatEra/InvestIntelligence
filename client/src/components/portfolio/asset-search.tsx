@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Asset {
   id: string;
@@ -16,19 +17,31 @@ interface AssetSearchProps {
 
 export default function AssetSearch({ onSelect }: AssetSearchProps) {
   const [search, setSearch] = useState("");
+  const { toast } = useToast();
 
-  const { data: results = [], isLoading } = useQuery<Asset[]>({
+  const { data: results = [], isLoading, error } = useQuery<Asset[]>({
     queryKey: ["/api/assets/search", search],
     enabled: search.length >= 2,
     queryFn: async () => {
       const res = await fetch(`/api/assets/search?q=${encodeURIComponent(search)}`);
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to search assets");
+        throw new Error("Failed to search assets");
       }
-      return res.json();
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("No results found");
+      }
+      return data;
     }
   });
+
+  if (error) {
+    toast({
+      title: "Search Error",
+      description: error instanceof Error ? error.message : "Failed to search assets",
+      variant: "destructive",
+    });
+  }
 
   return (
     <Command className="rounded-lg border shadow-md">
@@ -39,31 +52,43 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
       />
       <CommandList>
         <CommandEmpty>
-          {search.length < 2 ? "Type at least 2 characters to search" : "No results found"}
+          {search.length < 2 ? (
+            "Type at least 2 characters to search"
+          ) : isLoading ? (
+            <div className="flex items-center justify-center py-2">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Searching...
+            </div>
+          ) : (
+            "No results found"
+          )}
         </CommandEmpty>
         <CommandGroup heading="Assets">
-          {isLoading ? (
-            <CommandItem disabled>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Searching...
+          {results.map((asset) => (
+            <CommandItem
+              key={asset.id}
+              onSelect={() => {
+                if (!asset.current_price) {
+                  toast({
+                    title: "Error",
+                    description: "Price information is missing",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                onSelect(asset);
+              }}
+              className="flex justify-between items-center"
+            >
+              <div>
+                <span className="font-medium">{asset.symbol.toUpperCase()}</span>
+                <span className="ml-2 text-muted-foreground">{asset.name}</span>
+              </div>
+              <span className="text-sm">
+                ${asset.current_price?.toLocaleString() ?? 'N/A'}
+              </span>
             </CommandItem>
-          ) : (
-            results.map((asset) => (
-              <CommandItem
-                key={asset.id}
-                onSelect={() => onSelect(asset)}
-                className="flex justify-between items-center"
-              >
-                <div>
-                  <span className="font-medium">{asset.symbol}</span>
-                  <span className="ml-2 text-muted-foreground">{asset.name}</span>
-                </div>
-                <span className="text-sm">
-                  ${asset.current_price.toLocaleString()}
-                </span>
-              </CommandItem>
-            ))
-          )}
+          ))}
         </CommandGroup>
       </CommandList>
     </Command>
