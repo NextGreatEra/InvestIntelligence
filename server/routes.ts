@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { searchAssets, getPrice, getPriceHistory } from "./lib/coingecko";
+import { searchAssets, getPrice } from "./lib/coinmarketcap";
 import { generatePortfolioInsight } from "./lib/openai";
 
 export function registerRoutes(app: Express) {
@@ -47,10 +47,10 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.get("/api/assets/:id/price", async (req, res) => {
+  app.get("/api/assets/:symbol/price", async (req, res) => {
     try {
-      const price = await getPrice(req.params.id);
-      console.log('Price fetched:', { id: req.params.id, price }); // Debug log
+      const price = await getPrice(req.params.symbol.toUpperCase());
+      console.log('Price fetched:', { symbol: req.params.symbol, price });
       if (!price) {
         return res.status(404).json({ message: "Price not found" });
       }
@@ -61,23 +61,13 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.get("/api/assets/:id/history", async (req, res) => {
-    const { days = "7" } = req.query;
-    try {
-      const history = await getPriceHistory(req.params.id, Number(days));
-      res.json(history);
-    } catch (error) {
-      console.error("History fetch error:", error);
-      res.status(500).json({ message: "Failed to fetch price history" });
-    }
-  });
 
   // Portfolio routes
   app.get("/api/portfolio", async (req, res) => {
     try {
       const items = await storage.getPortfolioItems();
       const assets = await storage.getAssets();
-      console.log('Portfolio data:', { items, assets }); // Debug log
+      console.log('Portfolio data:', { items, assets });
 
       const portfolio = await Promise.all(
         items.map(async (item) => {
@@ -101,12 +91,12 @@ export function registerRoutes(app: Express) {
   });
 
   app.post("/api/portfolio", async (req, res) => {
-    console.log('Portfolio creation request:', req.body); // Debug log
+    console.log('Portfolio creation request:', req.body);
     try {
       const { symbol, name, current_price, quantity } = req.body;
 
       if (!symbol || !name || !current_price || !quantity) {
-        console.log('Missing fields:', { symbol, name, current_price, quantity }); // Debug log
+        console.log('Missing fields:', { symbol, name, current_price, quantity });
         return res.status(400).json({ 
           message: "Missing required fields",
           details: { symbol, name, current_price, quantity }
@@ -115,7 +105,7 @@ export function registerRoutes(app: Express) {
 
       // First create or update the asset
       let asset = await storage.getAssetBySymbol(symbol);
-      console.log('Existing asset:', asset); // Debug log
+      console.log('Existing asset:', asset);
 
       if (!asset) {
         // Create new asset
@@ -125,7 +115,7 @@ export function registerRoutes(app: Express) {
           type: symbol.length <= 4 ? 'crypto' : 'stock',
           currentPrice: current_price.toString(),
         };
-        console.log('Creating new asset:', assetData); // Debug log
+        console.log('Creating new asset:', assetData);
         asset = await storage.createAsset(assetData);
       }
 
@@ -135,11 +125,11 @@ export function registerRoutes(app: Express) {
         quantity: quantity.toString(),
         averagePrice: current_price.toString(),
       };
-      console.log('Creating portfolio item:', portfolioItemData); // Debug log
+      console.log('Creating portfolio item:', portfolioItemData);
 
       const portfolioItem = await storage.createPortfolioItem(portfolioItemData);
 
-      console.log('Created portfolio item:', portfolioItem); // Debug log
+      console.log('Created portfolio item:', portfolioItem);
       res.json({
         ...portfolioItem,
         asset
