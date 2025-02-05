@@ -1,11 +1,25 @@
 const COINGECKO_API = "https://api.coingecko.com/api/v3";
+import { storage } from "../storage";
 
 // Add delay between requests to handle rate limiting
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function searchAssets(query: string) {
   try {
-    await delay(1000); // Add delay to respect rate limits
+    // First search in our database
+    const localAssets = await storage.searchAssets(query);
+    if (localAssets.length > 0) {
+      console.log(`Found ${localAssets.length} assets in local database`);
+      return localAssets.map(asset => ({
+        id: asset.id.toString(),
+        symbol: asset.symbol.toUpperCase(),
+        name: asset.name,
+        current_price: Number(asset.currentPrice)
+      }));
+    }
+
+    // If not found locally, search via CoinGecko
+    await delay(1000);
     const response = await fetch(
       `${COINGECKO_API}/search?query=${encodeURIComponent(query)}`,
       { 
@@ -28,11 +42,13 @@ export async function searchAssets(query: string) {
 
     const data = await response.json();
     const coins = data.coins || [];
-
-    // Get only the first 5 coins to minimize API calls
     const topCoins = coins.slice(0, 5);
 
-    // Fetch prices for all coins in one request
+    if (topCoins.length === 0) {
+      return [];
+    }
+
+    // Get prices in a single request
     const coinIds = topCoins.map((coin: any) => coin.id).join(',');
     const pricesResponse = await fetch(
       `${COINGECKO_API}/simple/price?ids=${coinIds}&vs_currencies=usd`,
@@ -50,13 +66,30 @@ export async function searchAssets(query: string) {
 
     const prices = await pricesResponse.json();
 
-    // Combine search results with prices
-    return topCoins.map((coin: any) => ({
-      id: coin.id,
-      symbol: coin.symbol.toUpperCase(),
-      name: coin.name,
-      current_price: prices[coin.id]?.usd || 0
+    // Store results in database for future use
+    const results = await Promise.all(topCoins.map(async (coin: any) => {
+      const price = prices[coin.id]?.usd || 0;
+      try {
+        // Store in database
+        await storage.createAsset({
+          symbol: coin.symbol.toUpperCase(),
+          name: coin.name,
+          type: 'crypto',
+          currentPrice: price.toString()
+        });
+      } catch (error) {
+        console.error('Failed to store asset:', error);
+      }
+
+      return {
+        id: coin.id,
+        symbol: coin.symbol.toUpperCase(),
+        name: coin.name,
+        current_price: price
+      };
     }));
+
+    return results;
   } catch (error) {
     console.error('CoinGecko search error:', error);
     throw new Error('Failed to search assets');

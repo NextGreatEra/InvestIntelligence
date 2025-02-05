@@ -1,7 +1,7 @@
 import { Asset, InsertAsset, PortfolioItem, InsertPortfolioItem } from "@shared/schema";
 import { assets, portfolioItems } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 
 export interface IStorage {
   getAssets(): Promise<Asset[]>;
@@ -9,6 +9,7 @@ export interface IStorage {
   getAssetBySymbol(symbol: string): Promise<Asset | undefined>;
   createAsset(asset: InsertAsset): Promise<Asset>;
   updateAssetPrice(id: number, price: number): Promise<Asset>;
+  searchAssets(query: string): Promise<Asset[]>;
 
   getPortfolioItems(): Promise<PortfolioItem[]>;
   getPortfolioItem(id: number): Promise<PortfolioItem | undefined>;
@@ -30,6 +31,14 @@ export class DatabaseStorage implements IStorage {
     const [asset] = await db.select().from(assets)
       .where(eq(assets.symbol, symbol.toUpperCase()));
     return asset;
+  }
+
+  async searchAssets(query: string): Promise<Asset[]> {
+    return await db.select()
+      .from(assets)
+      .where(ilike(assets.symbol, `%${query}%`))
+      .orWhere(ilike(assets.name, `%${query}%`))
+      .limit(5);
   }
 
   async createAsset(insertAsset: InsertAsset): Promise<Asset> {
