@@ -17,13 +17,7 @@ export function registerRoutes(app: Express) {
 
     try {
       const results = await searchAssets(q);
-      const assets = results.map(coin => ({
-        id: coin.id,
-        symbol: coin.symbol.toUpperCase(),
-        name: coin.name,
-        current_price: 0 // Will be fetched when selected
-      }));
-      res.json(assets);
+      res.json(results);
     } catch (error) {
       console.error("Search error:", error);
       res.status(500).json({ message: "Failed to search assets" });
@@ -82,37 +76,39 @@ export function registerRoutes(app: Express) {
   });
 
   app.post("/api/portfolio", async (req, res) => {
-    const validation = insertPortfolioItemSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({ 
-        message: "Invalid portfolio item data",
-        errors: validation.error.errors 
-      });
-    }
-
     try {
-      // First ensure we have the asset in our database
-      const { assetId, symbol, name, currentPrice } = req.body;
-      let asset = await storage.getAsset(assetId);
+      const { symbol, name, current_price, quantity } = req.body;
 
-      if (!asset) {
-        // Create the asset if it doesn't exist
-        asset = await storage.createAsset({
-          symbol,
-          name,
-          type: symbol.length <= 4 ? 'crypto' : 'stock', // Simple heuristic
-          currentPrice: currentPrice.toString(),
+      if (!symbol || !name || !current_price || !quantity) {
+        return res.status(400).json({ 
+          message: "Missing required fields" 
         });
       }
 
-      // Create the portfolio item
-      const item = await storage.createPortfolioItem({
+      // First create or update the asset
+      let asset = await storage.getAssetBySymbol(symbol);
+
+      if (!asset) {
+        // Create new asset
+        asset = await storage.createAsset({
+          symbol,
+          name,
+          type: symbol.length <= 4 ? 'crypto' : 'stock',
+          currentPrice: current_price.toString(),
+        });
+      }
+
+      // Create portfolio item
+      const portfolioItem = await storage.createPortfolioItem({
         assetId: asset.id,
-        quantity: validation.data.quantity,
-        averagePrice: validation.data.averagePrice,
+        quantity: quantity.toString(),
+        averagePrice: current_price.toString(),
       });
 
-      res.json(item);
+      res.json({
+        ...portfolioItem,
+        asset
+      });
     } catch (error) {
       console.error("Portfolio creation error:", error);
       res.status(500).json({ message: "Failed to create portfolio item" });

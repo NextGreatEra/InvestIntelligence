@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import AssetSearch from "@/components/portfolio/asset-search";
 import AssetList from "@/components/portfolio/asset-list";
-import { InsertPortfolioItem, insertPortfolioItemSchema } from "@shared/schema";
 
 interface SelectedAsset {
   id: string;
@@ -23,16 +22,23 @@ export default function Portfolio() {
   const { toast } = useToast();
 
   const addAssetMutation = useMutation({
-    mutationFn: async (data: InsertPortfolioItem & { symbol: string; name: string; currentPrice: number }) => {
+    mutationFn: async (data: { 
+      symbol: string;
+      name: string;
+      current_price: number;
+      quantity: string;
+    }) => {
       const res = await fetch("/api/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to add asset");
       }
+
       return res.json();
     },
     onSuccess: () => {
@@ -41,48 +47,35 @@ export default function Portfolio() {
       setSelectedAsset(null);
       setQuantity("");
       toast({
-        title: "Asset added",
-        description: "The asset has been added to your portfolio.",
+        title: "Success",
+        description: "Asset added to portfolio successfully.",
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to add asset to portfolio.",
+        description: error.message || "Failed to add asset to portfolio",
         variant: "destructive",
       });
     },
   });
 
   const handleAddAsset = () => {
-    if (!selectedAsset || !quantity) return;
-
-    const data = {
-      assetId: parseInt(selectedAsset.id),
-      quantity,
-      averagePrice: selectedAsset.current_price.toString(),
-      // Additional fields needed for asset creation
-      symbol: selectedAsset.symbol,
-      name: selectedAsset.name,
-      currentPrice: selectedAsset.current_price
-    };
-
-    const validation = insertPortfolioItemSchema.safeParse({
-      assetId: data.assetId,
-      quantity: data.quantity,
-      averagePrice: data.averagePrice
-    });
-
-    if (!validation.success) {
+    if (!selectedAsset || !quantity) {
       toast({
-        title: "Validation Error",
-        description: "Please check your input values.",
+        title: "Error",
+        description: "Please select an asset and enter quantity",
         variant: "destructive",
       });
       return;
     }
 
-    addAssetMutation.mutate(data);
+    addAssetMutation.mutate({
+      symbol: selectedAsset.symbol,
+      name: selectedAsset.name,
+      current_price: selectedAsset.current_price,
+      quantity
+    });
   };
 
   return (
@@ -120,6 +113,7 @@ export default function Portfolio() {
               <Button
                 onClick={handleAddAsset}
                 disabled={!selectedAsset || !quantity || addAssetMutation.isPending}
+                className="w-full"
               >
                 {addAssetMutation.isPending ? "Adding..." : "Add to Portfolio"}
               </Button>
