@@ -10,7 +10,7 @@ import AssetList from "@/components/portfolio/asset-list";
 import { InsertPortfolioItem, insertPortfolioItemSchema } from "@shared/schema";
 
 interface SelectedAsset {
-  id: number;
+  id: string;
   symbol: string;
   name: string;
   current_price: number;
@@ -23,13 +23,16 @@ export default function Portfolio() {
   const { toast } = useToast();
 
   const addAssetMutation = useMutation({
-    mutationFn: async (data: InsertPortfolioItem) => {
+    mutationFn: async (data: InsertPortfolioItem & { symbol: string; name: string; currentPrice: number }) => {
       const res = await fetch("/api/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Failed to add asset");
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to add asset");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -42,10 +45,10 @@ export default function Portfolio() {
         description: "The asset has been added to your portfolio.",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to add asset to portfolio.",
+        description: error.message || "Failed to add asset to portfolio.",
         variant: "destructive",
       });
     },
@@ -54,13 +57,22 @@ export default function Portfolio() {
   const handleAddAsset = () => {
     if (!selectedAsset || !quantity) return;
 
-    const data: InsertPortfolioItem = {
-      assetId: selectedAsset.id,
-      quantity: quantity,
-      averagePrice: selectedAsset.current_price.toString()
+    const data = {
+      assetId: parseInt(selectedAsset.id),
+      quantity,
+      averagePrice: selectedAsset.current_price.toString(),
+      // Additional fields needed for asset creation
+      symbol: selectedAsset.symbol,
+      name: selectedAsset.name,
+      currentPrice: selectedAsset.current_price
     };
 
-    const validation = insertPortfolioItemSchema.safeParse(data);
+    const validation = insertPortfolioItemSchema.safeParse({
+      assetId: data.assetId,
+      quantity: data.quantity,
+      averagePrice: data.averagePrice
+    });
+
     if (!validation.success) {
       toast({
         title: "Validation Error",
@@ -70,7 +82,7 @@ export default function Portfolio() {
       return;
     }
 
-    addAssetMutation.mutate(validation.data);
+    addAssetMutation.mutate(data);
   };
 
   return (
@@ -90,12 +102,20 @@ export default function Portfolio() {
                 onSelect={(asset) => setSelectedAsset(asset)}
               />
               {selectedAsset && (
-                <Input
-                  type="number"
-                  placeholder="Quantity"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                />
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span>Current Price:</span>
+                    <span className="font-medium">
+                      ${selectedAsset.current_price.toLocaleString()}
+                    </span>
+                  </div>
+                  <Input
+                    type="number"
+                    placeholder="Quantity"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                  />
+                </div>
               )}
               <Button
                 onClick={handleAddAsset}
