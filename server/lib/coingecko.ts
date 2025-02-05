@@ -5,7 +5,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function searchAssets(query: string) {
   try {
-    await delay(1000); // Add 1 second delay between requests
+    await delay(1000);
     const response = await fetch(
       `${COINGECKO_API}/search?query=${encodeURIComponent(query)}`,
       { 
@@ -27,14 +27,35 @@ export async function searchAssets(query: string) {
     }
 
     const data = await response.json();
-    console.log('CoinGecko search response:', data); // Debug log
-
-    // Only return coins (not markets or exchanges)
     const coins = data.coins || [];
-    return coins.slice(0, 10).map((coin: any) => ({
+
+    // Get only the first 5 coins to minimize API calls
+    const topCoins = coins.slice(0, 5);
+
+    // Fetch prices for all coins in one request
+    const coinIds = topCoins.map((coin: any) => coin.id).join(',');
+    const pricesResponse = await fetch(
+      `${COINGECKO_API}/simple/price?ids=${coinIds}&vs_currencies=usd`,
+      { 
+        headers: { 
+          'Accept': 'application/json',
+          'User-Agent': 'Portfolio Tracker'
+        } 
+      }
+    );
+
+    if (!pricesResponse.ok) {
+      throw new Error(`CoinGecko API error: ${pricesResponse.status}`);
+    }
+
+    const prices = await pricesResponse.json();
+
+    // Combine search results with prices
+    return topCoins.map((coin: any) => ({
       id: coin.id,
       symbol: coin.symbol.toUpperCase(),
-      name: coin.name
+      name: coin.name,
+      current_price: prices[coin.id]?.usd || 0
     }));
   } catch (error) {
     console.error('CoinGecko search error:', error);
@@ -44,7 +65,7 @@ export async function searchAssets(query: string) {
 
 export async function getPrice(id: string) {
   try {
-    await delay(1000); // Add 1 second delay between requests
+    await delay(1000);
     const response = await fetch(
       `${COINGECKO_API}/simple/price?ids=${id}&vs_currencies=usd`,
       { 
@@ -66,7 +87,7 @@ export async function getPrice(id: string) {
     }
 
     const data = await response.json();
-    return data[id]?.usd;
+    return data[id]?.usd || 0;
   } catch (error) {
     console.error('CoinGecko price error:', error);
     throw new Error('Failed to fetch price');
@@ -75,7 +96,7 @@ export async function getPrice(id: string) {
 
 export async function getPriceHistory(id: string, days = 7) {
   try {
-    await delay(1000); // Add 1 second delay between requests
+    await delay(1000);
     const response = await fetch(
       `${COINGECKO_API}/coins/${id}/market_chart?vs_currency=usd&days=${days}`,
       { 

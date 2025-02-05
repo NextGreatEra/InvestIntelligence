@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import AssetSearch from "@/components/portfolio/asset-search";
 import AssetList from "@/components/portfolio/asset-list";
 
-interface SelectedAsset {
+interface Asset {
   id: string;
   symbol: string;
   name: string;
@@ -18,7 +18,7 @@ interface SelectedAsset {
 export default function Portfolio() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [quantity, setQuantity] = useState("");
-  const [selectedAsset, setSelectedAsset] = useState<SelectedAsset | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const { toast } = useToast();
 
   const addAssetMutation = useMutation({
@@ -31,12 +31,7 @@ export default function Portfolio() {
       const res = await fetch("/api/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          symbol: data.symbol.toUpperCase(),
-          name: data.name,
-          current_price: data.current_price,
-          quantity: data.quantity
-        }),
+        body: JSON.stringify(data),
       });
 
       if (!res.ok) {
@@ -57,7 +52,6 @@ export default function Portfolio() {
       });
     },
     onError: (error: Error) => {
-      console.error('Mutation error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to add asset to portfolio",
@@ -71,15 +65,6 @@ export default function Portfolio() {
       toast({
         title: "Error",
         description: "Please select an asset and enter quantity",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!selectedAsset.current_price) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch current price. Please try again.",
         variant: "destructive",
       });
       return;
@@ -107,8 +92,7 @@ export default function Portfolio() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <AssetSearch
-                onSelect={(asset: SelectedAsset) => {
-                  console.log('Selected asset with price:', asset);
+                onSelect={(asset: Asset) => {
                   setSelectedAsset(asset);
                 }}
               />
@@ -117,7 +101,7 @@ export default function Portfolio() {
                   <div className="flex justify-between items-center">
                     <span>Current Price:</span>
                     <span className="font-medium">
-                      ${selectedAsset.current_price?.toLocaleString() ?? 'Loading...'}
+                      ${selectedAsset.current_price.toLocaleString()}
                     </span>
                   </div>
                   <Input

@@ -27,9 +27,7 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
         throw new Error(error.message || "Failed to search assets");
       }
       return res.json();
-    },
-    staleTime: 30000,
-    retry: 1
+    }
   });
 
   return (
@@ -53,28 +51,15 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
             results.map((asset) => (
               <CommandItem
                 key={asset.id}
-                onSelect={() => {
-                  // Fetch current price before selecting
-                  fetch(`/api/assets/${asset.id}/price`)
-                    .then(res => {
-                      if (!res.ok) throw new Error('Failed to fetch price');
-                      return res.json();
-                    })
-                    .then(data => {
-                      if (!data.price) throw new Error('Invalid price data');
-                      onSelect({
-                        ...asset,
-                        current_price: data.price
-                      });
-                    })
-                    .catch(error => {
-                      console.error('Error fetching price:', error);
-                    });
-                }}
+                onSelect={() => onSelect(asset)}
+                className="flex justify-between items-center"
               >
-                <span className="font-medium">{asset.symbol.toUpperCase()}</span>
-                <span className="ml-2 text-muted-foreground">
-                  {asset.name}
+                <div>
+                  <span className="font-medium">{asset.symbol}</span>
+                  <span className="ml-2 text-muted-foreground">{asset.name}</span>
+                </div>
+                <span className="text-sm">
+                  ${asset.current_price.toLocaleString()}
                 </span>
               </CommandItem>
             ))
