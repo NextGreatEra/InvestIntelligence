@@ -1,3 +1,4 @@
+
 import { useState, useCallback, memo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
@@ -15,7 +16,7 @@ interface AssetSearchProps {
   onSelect: (asset: Asset) => void;
 }
 
-const AssetSearch = memo(({ onSelect }: AssetSearchProps) => {
+const AssetSearch = ({ onSelect }: AssetSearchProps) => {
   const [search, setSearch] = useState("");
   const { toast } = useToast();
 
@@ -23,8 +24,8 @@ const AssetSearch = memo(({ onSelect }: AssetSearchProps) => {
     queryKey: ["/api/assets/search", search],
     enabled: search.length >= 2,
     retry: false,
-    staleTime: 30000, // Cache results for 30 seconds
-    gcTime: 60000, // Keep unused data for 1 minute
+    staleTime: 30000,
+    gcTime: 60000,
     queryFn: async () => {
       try {
         const res = await fetch(`/api/assets/search?q=${encodeURIComponent(search)}`);
@@ -96,9 +97,6 @@ const AssetSearch = memo(({ onSelect }: AssetSearchProps) => {
       </CommandList>
     </Command>
   );
-}
+};
 
-// Memoize the component to prevent unnecessary re-renders
-});
-
-export default AssetSearch;
+export default memo(AssetSearch);
