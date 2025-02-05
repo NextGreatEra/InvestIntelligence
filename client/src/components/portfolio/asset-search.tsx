@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Loader2 } from "lucide-react";
@@ -22,26 +22,37 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
   const { data: results = [], isLoading, error } = useQuery<Asset[]>({
     queryKey: ["/api/assets/search", search],
     enabled: search.length >= 2,
+    retry: false,
     queryFn: async () => {
-      const res = await fetch(`/api/assets/search?q=${encodeURIComponent(search)}`);
-      if (!res.ok) {
-        throw new Error("Failed to search assets");
+      try {
+        const res = await fetch(`/api/assets/search?q=${encodeURIComponent(search)}`);
+        if (!res.ok) {
+          throw new Error("Failed to search assets");
+        }
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+          return [];
+        }
+        return data;
+      } catch (err) {
+        console.error("Search error:", err);
+        return [];
       }
-      const data = await res.json();
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new Error("No results found");
-      }
-      return data;
     }
   });
 
-  if (error) {
-    toast({
-      title: "Search Error",
-      description: error instanceof Error ? error.message : "Failed to search assets",
-      variant: "destructive",
-    });
-  }
+  // Handle asset selection with validation
+  const handleSelect = useCallback((asset: Asset) => {
+    if (!asset.current_price) {
+      toast({
+        title: "Error",
+        description: "Price information is missing",
+        variant: "destructive",
+      });
+      return;
+    }
+    onSelect(asset);
+  }, [onSelect, toast]);
 
   return (
     <Command className="rounded-lg border shadow-md">
@@ -67,17 +78,7 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
           {results.map((asset) => (
             <CommandItem
               key={asset.id}
-              onSelect={() => {
-                if (!asset.current_price) {
-                  toast({
-                    title: "Error",
-                    description: "Price information is missing",
-                    variant: "destructive",
-                  });
-                  return;
-                }
-                onSelect(asset);
-              }}
+              onSelect={() => handleSelect(asset)}
               className="flex justify-between items-center"
             >
               <div>
