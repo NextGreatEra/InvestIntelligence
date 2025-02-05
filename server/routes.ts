@@ -1,7 +1,6 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { insertAssetSchema, insertPortfolioItemSchema } from "@shared/schema";
 import { searchAssets, getPrice, getPriceHistory } from "./lib/coingecko";
 import { generatePortfolioInsight } from "./lib/openai";
 
@@ -17,6 +16,7 @@ export function registerRoutes(app: Express) {
 
     try {
       const results = await searchAssets(q);
+      console.log('Search results:', results); // Debug log
       res.json(results);
     } catch (error) {
       console.error("Search error:", error);
@@ -27,6 +27,7 @@ export function registerRoutes(app: Express) {
   app.get("/api/assets/:id/price", async (req, res) => {
     try {
       const price = await getPrice(req.params.id);
+      console.log('Price fetched:', { id: req.params.id, price }); // Debug log
       if (!price) {
         return res.status(404).json({ message: "Price not found" });
       }
@@ -53,6 +54,7 @@ export function registerRoutes(app: Express) {
     try {
       const items = await storage.getPortfolioItems();
       const assets = await storage.getAssets();
+      console.log('Portfolio data:', { items, assets }); // Debug log
 
       const portfolio = await Promise.all(
         items.map(async (item) => {
@@ -76,42 +78,55 @@ export function registerRoutes(app: Express) {
   });
 
   app.post("/api/portfolio", async (req, res) => {
+    console.log('Portfolio creation request:', req.body); // Debug log
     try {
       const { symbol, name, current_price, quantity } = req.body;
 
       if (!symbol || !name || !current_price || !quantity) {
+        console.log('Missing fields:', { symbol, name, current_price, quantity }); // Debug log
         return res.status(400).json({ 
-          message: "Missing required fields" 
+          message: "Missing required fields",
+          details: { symbol, name, current_price, quantity }
         });
       }
 
       // First create or update the asset
       let asset = await storage.getAssetBySymbol(symbol);
+      console.log('Existing asset:', asset); // Debug log
 
       if (!asset) {
         // Create new asset
-        asset = await storage.createAsset({
+        const assetData = {
           symbol,
           name,
           type: symbol.length <= 4 ? 'crypto' : 'stock',
           currentPrice: current_price.toString(),
-        });
+        };
+        console.log('Creating new asset:', assetData); // Debug log
+        asset = await storage.createAsset(assetData);
       }
 
       // Create portfolio item
-      const portfolioItem = await storage.createPortfolioItem({
+      const portfolioItemData = {
         assetId: asset.id,
         quantity: quantity.toString(),
         averagePrice: current_price.toString(),
-      });
+      };
+      console.log('Creating portfolio item:', portfolioItemData); // Debug log
 
+      const portfolioItem = await storage.createPortfolioItem(portfolioItemData);
+
+      console.log('Created portfolio item:', portfolioItem); // Debug log
       res.json({
         ...portfolioItem,
         asset
       });
     } catch (error) {
       console.error("Portfolio creation error:", error);
-      res.status(500).json({ message: "Failed to create portfolio item" });
+      res.status(500).json({ 
+        message: "Failed to create portfolio item",
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 

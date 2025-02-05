@@ -28,18 +28,21 @@ export default function Portfolio() {
       current_price: number;
       quantity: string;
     }) => {
+      console.log('Submitting data:', data); // Debug log
       const res = await fetch("/api/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
+      const responseData = await res.json();
+      console.log('API Response:', responseData); // Debug log
+
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to add asset");
+        throw new Error(responseData.message || "Failed to add asset");
       }
 
-      return res.json();
+      return responseData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
@@ -52,6 +55,7 @@ export default function Portfolio() {
       });
     },
     onError: (error: Error) => {
+      console.error('Mutation error:', error); // Debug log
       toast({
         title: "Error",
         description: error.message || "Failed to add asset to portfolio",
@@ -69,6 +73,8 @@ export default function Portfolio() {
       });
       return;
     }
+
+    console.log('Adding asset:', { selectedAsset, quantity }); // Debug log
 
     addAssetMutation.mutate({
       symbol: selectedAsset.symbol,
@@ -92,7 +98,10 @@ export default function Portfolio() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <AssetSearch
-                onSelect={(asset) => setSelectedAsset(asset)}
+                onSelect={(asset) => {
+                  console.log('Selected asset:', asset); // Debug log
+                  setSelectedAsset(asset);
+                }}
               />
               {selectedAsset && (
                 <div className="space-y-4">
