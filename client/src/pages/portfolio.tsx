@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,15 @@ export default function Portfolio() {
     },
   });
 
-  const handleAddAsset = () => {
+  const handleAssetSelect = useCallback((asset: Asset) => {
+    setSelectedAsset(asset);
+  }, []); // No dependencies needed as we're just setting state
+
+  const handleQuantityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuantity(e.target.value);
+  }, []);
+
+  const handleAddAsset = useCallback(() => {
     if (!selectedAsset || !quantity) {
       toast({
         title: "Error",
@@ -86,7 +94,7 @@ export default function Portfolio() {
       current_price: selectedAsset.current_price,
       quantity
     });
-  };
+  }, [selectedAsset, quantity, toast, addAssetMutation]);
 
   return (
     <div className="space-y-6">
@@ -101,11 +109,7 @@ export default function Portfolio() {
               <DialogTitle>Add Asset to Portfolio</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <AssetSearch
-                onSelect={(asset: Asset) => {
-                  setSelectedAsset(asset);
-                }}
-              />
+              <AssetSearch onSelect={handleAssetSelect} />
               {selectedAsset && (
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
@@ -120,7 +124,7 @@ export default function Portfolio() {
                     step="any"
                     placeholder="Enter quantity"
                     value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
+                    onChange={handleQuantityChange}
                   />
                   <Button
                     onClick={handleAddAsset}

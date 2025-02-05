@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, memo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Loader2 } from "lucide-react";
@@ -15,14 +15,16 @@ interface AssetSearchProps {
   onSelect: (asset: Asset) => void;
 }
 
-export default function AssetSearch({ onSelect }: AssetSearchProps) {
+function AssetSearch({ onSelect }: AssetSearchProps) {
   const [search, setSearch] = useState("");
   const { toast } = useToast();
 
-  const { data: results = [], isLoading, error } = useQuery<Asset[]>({
+  const { data: results = [], isLoading } = useQuery<Asset[]>({
     queryKey: ["/api/assets/search", search],
     enabled: search.length >= 2,
     retry: false,
+    staleTime: 30000, // Cache results for 30 seconds
+    gcTime: 60000, // Keep unused data for 1 minute
     queryFn: async () => {
       try {
         const res = await fetch(`/api/assets/search?q=${encodeURIComponent(search)}`);
@@ -30,10 +32,7 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
           throw new Error("Failed to search assets");
         }
         const data = await res.json();
-        if (!Array.isArray(data)) {
-          return [];
-        }
-        return data;
+        return Array.isArray(data) ? data : [];
       } catch (err) {
         console.error("Search error:", err);
         return [];
@@ -41,7 +40,6 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
     }
   });
 
-  // Handle asset selection with validation
   const handleSelect = useCallback((asset: Asset) => {
     if (!asset.current_price) {
       toast({
@@ -54,12 +52,16 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
     onSelect(asset);
   }, [onSelect, toast]);
 
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+  }, []);
+
   return (
     <Command className="rounded-lg border shadow-md">
       <CommandInput
         placeholder="Search assets... (e.g. Bitcoin)"
         value={search}
-        onValueChange={setSearch}
+        onValueChange={handleSearchChange}
       />
       <CommandList>
         <CommandEmpty>
@@ -95,3 +97,6 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
     </Command>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export default memo(AssetSearch);
