@@ -1,4 +1,7 @@
 import { Asset, InsertAsset, PortfolioItem, InsertPortfolioItem } from "@shared/schema";
+import { assets, portfolioItems } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getAssets(): Promise<Asset[]>;
@@ -6,87 +9,70 @@ export interface IStorage {
   getAssetBySymbol(symbol: string): Promise<Asset | undefined>;
   createAsset(asset: InsertAsset): Promise<Asset>;
   updateAssetPrice(id: number, price: number): Promise<Asset>;
-  
+
   getPortfolioItems(): Promise<PortfolioItem[]>;
   getPortfolioItem(id: number): Promise<PortfolioItem | undefined>;
   createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem>;
   updatePortfolioItem(id: number, quantity: number): Promise<PortfolioItem>;
 }
 
-export class MemStorage implements IStorage {
-  private assets: Map<number, Asset>;
-  private portfolioItems: Map<number, PortfolioItem>;
-  private currentAssetId: number;
-  private currentPortfolioItemId: number;
-
-  constructor() {
-    this.assets = new Map();
-    this.portfolioItems = new Map();
-    this.currentAssetId = 1;
-    this.currentPortfolioItemId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   async getAssets(): Promise<Asset[]> {
-    return Array.from(this.assets.values());
+    return await db.select().from(assets);
   }
 
   async getAsset(id: number): Promise<Asset | undefined> {
-    return this.assets.get(id);
+    const [asset] = await db.select().from(assets).where(eq(assets.id, id));
+    return asset;
   }
 
   async getAssetBySymbol(symbol: string): Promise<Asset | undefined> {
-    return Array.from(this.assets.values()).find(
-      (asset) => asset.symbol.toLowerCase() === symbol.toLowerCase()
-    );
+    const [asset] = await db.select().from(assets)
+      .where(eq(assets.symbol, symbol.toUpperCase()));
+    return asset;
   }
 
   async createAsset(insertAsset: InsertAsset): Promise<Asset> {
-    const id = this.currentAssetId++;
-    const asset: Asset = {
-      ...insertAsset,
-      id,
-      lastUpdated: new Date()
-    };
-    this.assets.set(id, asset);
+    const [asset] = await db.insert(assets)
+      .values({ ...insertAsset, lastUpdated: new Date() })
+      .returning();
     return asset;
   }
 
   async updateAssetPrice(id: number, price: number): Promise<Asset> {
-    const asset = await this.getAsset(id);
+    const [asset] = await db.update(assets)
+      .set({ currentPrice: price.toString(), lastUpdated: new Date() })
+      .where(eq(assets.id, id))
+      .returning();
     if (!asset) throw new Error("Asset not found");
-    
-    const updated: Asset = {
-      ...asset,
-      currentPrice: price.toString(),
-      lastUpdated: new Date()
-    };
-    this.assets.set(id, updated);
-    return updated;
+    return asset;
   }
 
   async getPortfolioItems(): Promise<PortfolioItem[]> {
-    return Array.from(this.portfolioItems.values());
+    return await db.select().from(portfolioItems);
   }
 
   async getPortfolioItem(id: number): Promise<PortfolioItem | undefined> {
-    return this.portfolioItems.get(id);
+    const [item] = await db.select().from(portfolioItems)
+      .where(eq(portfolioItems.id, id));
+    return item;
   }
 
   async createPortfolioItem(insertItem: InsertPortfolioItem): Promise<PortfolioItem> {
-    const id = this.currentPortfolioItemId++;
-    const item: PortfolioItem = { ...insertItem, id };
-    this.portfolioItems.set(id, item);
+    const [item] = await db.insert(portfolioItems)
+      .values(insertItem)
+      .returning();
     return item;
   }
 
   async updatePortfolioItem(id: number, quantity: number): Promise<PortfolioItem> {
-    const item = await this.getPortfolioItem(id);
+    const [item] = await db.update(portfolioItems)
+      .set({ quantity: quantity.toString() })
+      .where(eq(portfolioItems.id, id))
+      .returning();
     if (!item) throw new Error("Portfolio item not found");
-    
-    const updated: PortfolioItem = { ...item, quantity: quantity.toString() };
-    this.portfolioItems.set(id, updated);
-    return updated;
+    return item;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
