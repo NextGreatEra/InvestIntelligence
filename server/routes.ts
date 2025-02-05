@@ -34,10 +34,7 @@ export function registerRoutes(app: Express) {
 
       res.json(results);
     } catch (error) {
-      console.error("Search error:", {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      });
+      console.error("Search error:", error instanceof Error ? error.message : error);
 
       res.status(500).json({ 
         message: "Failed to search assets",

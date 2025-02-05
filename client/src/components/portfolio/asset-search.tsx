@@ -15,7 +15,7 @@ interface AssetSearchProps {
   onSelect: (asset: Asset) => void;
 }
 
-function AssetSearch({ onSelect }: AssetSearchProps) {
+const AssetSearch = memo(({ onSelect }: AssetSearchProps) => {
   const [search, setSearch] = useState("");
   const { toast } = useToast();
 
@@ -99,4 +99,6 @@ function AssetSearch({ onSelect }: AssetSearchProps) {
 }
 
 // Memoize the component to prevent unnecessary re-renders
-export default memo(AssetSearch);
+});
+
+export default AssetSearch;
