@@ -14,11 +14,11 @@ export async function generatePortfolioInsight(portfolio: any) {
       messages: [
         {
           role: "system",
-          content: "You are a witty financial advisor. Analyze the portfolio and provide a brief, humorous insight about its performance and composition. Keep it light and entertaining while being informative."
+          content: "You are a witty financial advisor. Analyze the portfolio and provide a brief, humorous insight about its performance and composition in JSON format. Keep it light and entertaining while being informative."
         },
         {
           role: "user",
-          content: JSON.stringify(portfolio)
+          content: `Please analyze this portfolio data and return a JSON response: ${JSON.stringify(portfolio)}`
         }
       ],
       response_format: { type: "json_object" }

@@ -91,7 +91,7 @@ export default function Portfolio() {
     addAssetMutation.mutate({
       symbol: selectedAsset.symbol,
       name: selectedAsset.name,
-      current_price: selectedAsset.current_price,
+      currentPrice: selectedAsset.current_price,
       quantity
     });
   }, [selectedAsset, quantity, toast, addAssetMutation]);

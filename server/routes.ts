@@ -101,13 +101,13 @@ export function registerRoutes(app: Express) {
   app.post("/api/portfolio", async (req, res) => {
     console.log('Portfolio creation request:', req.body);
     try {
-      const { symbol, name, current_price, quantity } = req.body;
+      const { symbol, name, currentPrice, quantity } = req.body;
 
-      if (!symbol || !name || !current_price || !quantity) {
-        console.log('Missing fields:', { symbol, name, current_price, quantity });
+      if (!symbol || !name || !currentPrice || !quantity) {
+        console.log('Missing fields:', { symbol, name, currentPrice, quantity });
         return res.status(400).json({ 
           message: "Missing required fields",
-          details: { symbol, name, current_price, quantity }
+          details: { symbol, name, currentPrice, quantity }
         });
       }
 
@@ -121,7 +121,7 @@ export function registerRoutes(app: Express) {
           symbol,
           name,
           type: 'crypto',
-          currentPrice: current_price.toString(),
+          currentPrice: currentPrice.toString(),
         };
         console.log('Creating new asset:', assetData);
         asset = await storage.createAsset(assetData);
