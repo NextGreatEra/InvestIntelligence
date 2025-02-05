@@ -30,7 +30,9 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
       const data = await res.json();
       console.log('Search results:', data); // Debug log
       return data;
-    }
+    },
+    staleTime: 30000, // Cache results for 30 seconds
+    retry: 1
   });
 
   return (
@@ -58,7 +60,10 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
                   console.log('Selected asset:', asset); // Debug log
                   // Fetch current price before selecting
                   fetch(`/api/assets/${asset.id}/price`)
-                    .then(res => res.json())
+                    .then(res => {
+                      if (!res.ok) throw new Error('Failed to fetch price');
+                      return res.json();
+                    })
                     .then(data => {
                       onSelect({
                         ...asset,

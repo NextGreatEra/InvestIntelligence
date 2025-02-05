@@ -28,7 +28,10 @@ export async function searchAssets(query: string) {
 
     const data = await response.json();
     console.log('CoinGecko search response:', data); // Debug log
-    return data.coins.slice(0, 10).map((coin: any) => ({
+
+    // Only return coins (not markets or exchanges)
+    const coins = data.coins || [];
+    return coins.slice(0, 10).map((coin: any) => ({
       id: coin.id,
       symbol: coin.symbol.toUpperCase(),
       name: coin.name
