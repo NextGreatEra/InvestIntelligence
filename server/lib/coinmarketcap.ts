@@ -55,8 +55,11 @@ export async function searchAssets(query: string) {
 
     // If not found locally, search via CoinMarketCap
     await enforceRateLimit();
+    
+    // Add search query to filter
+    const searchQuery = query.toLowerCase();
     const response = await fetch(
-      `${CMC_API}/cryptocurrency/listings/latest?limit=5&sort=market_cap&sort_dir=desc`,
+      `${CMC_API}/cryptocurrency/listings/latest?limit=20&sort=market_cap&sort_dir=desc`,
       {
         headers: {
           'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY,
@@ -72,7 +75,11 @@ export async function searchAssets(query: string) {
     }
 
     const data = await response.json();
-    const assets = data.data || [];
+    const allAssets = data.data || [];
+    const assets = allAssets.filter(asset => 
+      asset.symbol.toLowerCase().includes(searchQuery) || 
+      asset.name.toLowerCase().includes(searchQuery)
+    ).slice(0, 5);
 
     // Store results in database for future use
     const results = await Promise.all(assets.map(async (asset: CMCData) => {
