@@ -7,7 +7,7 @@ interface Asset {
   id: string;
   symbol: string;
   name: string;
-  current_price?: number;
+  current_price: number;
 }
 
 interface AssetSearchProps {
@@ -21,17 +21,14 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
     queryKey: ["/api/assets/search", search],
     enabled: search.length >= 2,
     queryFn: async () => {
-      console.log('Searching for:', search); // Debug log
       const res = await fetch(`/api/assets/search?q=${encodeURIComponent(search)}`);
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Failed to search assets");
       }
-      const data = await res.json();
-      console.log('Search results:', data); // Debug log
-      return data;
+      return res.json();
     },
-    staleTime: 30000, // Cache results for 30 seconds
+    staleTime: 30000,
     retry: 1
   });
 
@@ -57,7 +54,6 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
               <CommandItem
                 key={asset.id}
                 onSelect={() => {
-                  console.log('Selected asset:', asset); // Debug log
                   // Fetch current price before selecting
                   fetch(`/api/assets/${asset.id}/price`)
                     .then(res => {
@@ -65,6 +61,7 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
                       return res.json();
                     })
                     .then(data => {
+                      if (!data.price) throw new Error('Invalid price data');
                       onSelect({
                         ...asset,
                         current_price: data.price
@@ -75,7 +72,7 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
                     });
                 }}
               >
-                <span className="font-medium">{asset.symbol}</span>
+                <span className="font-medium">{asset.symbol.toUpperCase()}</span>
                 <span className="ml-2 text-muted-foreground">
                   {asset.name}
                 </span>

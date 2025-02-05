@@ -28,21 +28,23 @@ export default function Portfolio() {
       current_price: number;
       quantity: string;
     }) => {
-      console.log('Submitting data:', data); // Debug log
       const res = await fetch("/api/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          symbol: data.symbol.toUpperCase(),
+          name: data.name,
+          current_price: data.current_price,
+          quantity: data.quantity
+        }),
       });
 
-      const responseData = await res.json();
-      console.log('API Response:', responseData); // Debug log
-
       if (!res.ok) {
-        throw new Error(responseData.message || "Failed to add asset");
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to add asset");
       }
 
-      return responseData;
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
@@ -55,7 +57,7 @@ export default function Portfolio() {
       });
     },
     onError: (error: Error) => {
-      console.error('Mutation error:', error); // Debug log
+      console.error('Mutation error:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to add asset to portfolio",
@@ -74,7 +76,14 @@ export default function Portfolio() {
       return;
     }
 
-    console.log('Adding asset:', { selectedAsset, quantity }); // Debug log
+    if (!selectedAsset.current_price) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch current price. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     addAssetMutation.mutate({
       symbol: selectedAsset.symbol,
@@ -98,8 +107,8 @@ export default function Portfolio() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <AssetSearch
-                onSelect={(asset) => {
-                  console.log('Selected asset:', asset); // Debug log
+                onSelect={(asset: SelectedAsset) => {
+                  console.log('Selected asset with price:', asset);
                   setSelectedAsset(asset);
                 }}
               />
@@ -108,7 +117,7 @@ export default function Portfolio() {
                   <div className="flex justify-between items-center">
                     <span>Current Price:</span>
                     <span className="font-medium">
-                      ${selectedAsset.current_price.toLocaleString()}
+                      ${selectedAsset.current_price?.toLocaleString() ?? 'Loading...'}
                     </span>
                   </div>
                   <Input
