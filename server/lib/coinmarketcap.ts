@@ -121,5 +121,3 @@ export async function getPrice(symbol: string): Promise<number> {
     throw new Error('Failed to fetch price');
   }
 }
-
-// Note: Historical data endpoint removed as it's not available in the free tier

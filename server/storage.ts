@@ -1,7 +1,7 @@
 import { Asset, InsertAsset, PortfolioItem, InsertPortfolioItem } from "@shared/schema";
 import { assets, portfolioItems } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike } from "drizzle-orm";
+import { eq, or, ilike } from "drizzle-orm";
 
 export interface IStorage {
   getAssets(): Promise<Asset[]>;
@@ -36,8 +36,12 @@ export class DatabaseStorage implements IStorage {
   async searchAssets(query: string): Promise<Asset[]> {
     return await db.select()
       .from(assets)
-      .where(ilike(assets.symbol, `%${query}%`))
-      .orWhere(ilike(assets.name, `%${query}%`))
+      .where(
+        or(
+          ilike(assets.symbol, `%${query}%`),
+          ilike(assets.name, `%${query}%`)
+        )
+      )
       .limit(5);
   }
 
