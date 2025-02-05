@@ -7,7 +7,7 @@ interface Asset {
   id: string;
   symbol: string;
   name: string;
-  current_price: number;
+  current_price?: number;
 }
 
 interface AssetSearchProps {
@@ -19,25 +19,31 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
 
   const { data: results = [], isLoading } = useQuery<Asset[]>({
     queryKey: ["/api/assets/search", search],
-    enabled: search.length > 1,
+    enabled: search.length >= 2,
     queryFn: async () => {
+      console.log('Searching for:', search); // Debug log
       const res = await fetch(`/api/assets/search?q=${encodeURIComponent(search)}`);
       if (!res.ok) {
-        throw new Error("Failed to search assets");
+        const error = await res.json();
+        throw new Error(error.message || "Failed to search assets");
       }
-      return res.json();
+      const data = await res.json();
+      console.log('Search results:', data); // Debug log
+      return data;
     }
   });
 
   return (
     <Command className="rounded-lg border shadow-md">
       <CommandInput
-        placeholder="Search assets..."
+        placeholder="Search assets... (e.g. Bitcoin)"
         value={search}
         onValueChange={setSearch}
       />
       <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandEmpty>
+          {search.length < 2 ? "Type at least 2 characters to search" : "No results found"}
+        </CommandEmpty>
         <CommandGroup heading="Assets">
           {isLoading ? (
             <CommandItem disabled>
@@ -49,7 +55,8 @@ export default function AssetSearch({ onSelect }: AssetSearchProps) {
               <CommandItem
                 key={asset.id}
                 onSelect={() => {
-                  // Fetch the current price before selecting
+                  console.log('Selected asset:', asset); // Debug log
+                  // Fetch current price before selecting
                   fetch(`/api/assets/${asset.id}/price`)
                     .then(res => res.json())
                     .then(data => {
