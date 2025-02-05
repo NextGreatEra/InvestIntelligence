@@ -7,6 +7,19 @@ import { generatePortfolioInsight } from "./lib/openai";
 export function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
+  app.get("/api/test-cmc", async (req, res) => {
+    try {
+      // Use the searchAssets function with a simple query
+      const results = await searchAssets("bitcoin");
+      res.json({ status: "success", message: "API key is working" });
+    } catch (error) {
+      res.status(500).json({ 
+        status: "error", 
+        message: error instanceof Error ? error.message : "API key validation failed"
+      });
+    }
+  });
+
   // Asset routes
   app.get("/api/assets/search", async (req, res) => {
     const { q } = req.query;
