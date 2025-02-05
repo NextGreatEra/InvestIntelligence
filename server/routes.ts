@@ -61,7 +61,6 @@ export function registerRoutes(app: Express) {
     }
   });
 
-
   // Portfolio routes
   app.get("/api/portfolio", async (req, res) => {
     try {
@@ -112,7 +111,7 @@ export function registerRoutes(app: Express) {
         const assetData = {
           symbol,
           name,
-          type: symbol.length <= 4 ? 'crypto' : 'stock',
+          type: 'crypto',
           currentPrice: current_price.toString(),
         };
         console.log('Creating new asset:', assetData);
