@@ -96,11 +96,10 @@ export async function getStockPrice(symbol: string): Promise<number> {
     }
 
     const data = await response.json();
-    const price = data.c || 0; // Current price
-    
-    if (!price) {
-      throw new Error(`No price available for ${symbol}`);
+    if (typeof data.c !== 'number') {
+      throw new Error(`Invalid price data for ${symbol}`);
     }
+    const price = data.c;
     
     return price;
   } catch (error) {
