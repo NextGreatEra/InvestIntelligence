@@ -2,11 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Asset } from "@shared/schema";
+import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
 
 interface AssetWithDetails extends Asset {
   holdings: number;
   value: number;
-  profitLoss: number;
+  priceChange24h: number;
 }
 
 export default function AssetList() {
@@ -46,16 +47,22 @@ export default function AssetList() {
                 <p className="font-medium">
                   ${asset.value.toLocaleString()}
                 </p>
-                <p
-                  className={
-                    asset.profitLoss >= 0
-                      ? "text-green-500"
-                      : "text-red-500"
-                  }
-                >
-                  ${Math.abs(asset.profitLoss).toLocaleString()}
-                  {asset.profitLoss >= 0 ? " profit" : " loss"}
-                </p>
+                <div className="flex items-center justify-end gap-1">
+                  {asset.priceChange24h >= 0 ? (
+                    <ArrowUpIcon className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <ArrowDownIcon className="h-4 w-4 text-red-500" />
+                  )}
+                  <p
+                    className={
+                      asset.priceChange24h >= 0
+                        ? "text-green-500"
+                        : "text-red-500"
+                    }
+                  >
+                    {Math.abs(asset.priceChange24h).toFixed(2)}%
+                  </p>
+                </div>
               </div>
             </div>
           ))}
