@@ -9,7 +9,6 @@ export function registerRoutes(app: Express) {
 
   app.get("/api/test-cmc", async (req, res) => {
     try {
-      // Use the searchAssets function with a simple query
       const results = await searchAssets("bitcoin");
       res.json({ status: "success", message: "API key is working" });
     } catch (error) {
@@ -49,7 +48,6 @@ export function registerRoutes(app: Express) {
       res.json(searchResults);
     } catch (error) {
       console.error("Search error:", error instanceof Error ? error.message : error);
-
       res.status(500).json({ 
         message: "Failed to search assets",
         details: error instanceof Error ? error.message : "Unknown error occurred"

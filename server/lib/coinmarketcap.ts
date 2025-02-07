@@ -1,22 +1,6 @@
 const CMC_API = "https://pro-api.coinmarketcap.com/v1";
 import { storage } from "../storage";
 
-interface CMCQuote {
-  price: number;
-  volume_24h: number;
-  market_cap: number;
-  percent_change_24h: number;
-}
-
-interface CMCData {
-  id: number;
-  name: string;
-  symbol: string;
-  quote: {
-    USD: CMCQuote;
-  };
-}
-
 // Add rate limiting
 const REQUEST_INTERVAL = 500; // 500ms between requests
 let lastRequestTime = 0;
@@ -44,7 +28,7 @@ export async function searchAssets(query: string) {
       `${CMC_API}/cryptocurrency/search?query=${encodeURIComponent(query)}`,
       {
         headers: {
-          'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY!,
+          'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY,
           'Accept': 'application/json'
         }
       }
@@ -66,14 +50,14 @@ export async function searchAssets(query: string) {
     if (topResults.length === 0) return [];
 
     // Get latest quotes for these cryptocurrencies
-    const symbols = topResults.map(crypto => crypto.symbol).join(',');
+    const symbols = topResults.map((crypto: any) => crypto.symbol).join(',');
     await enforceRateLimit();
 
     const quotesResponse = await fetch(
       `${CMC_API}/cryptocurrency/quotes/latest?symbol=${symbols}`,
       {
         headers: {
-          'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY!,
+          'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY,
           'Accept': 'application/json'
         }
       }
@@ -87,7 +71,7 @@ export async function searchAssets(query: string) {
     const quotesData = await quotesResponse.json();
 
     // Map results with their current prices
-    const results = topResults.map(crypto => {
+    const results = topResults.map((crypto: any) => {
       const quote = quotesData.data[crypto.symbol]?.quote?.USD;
       const price = quote?.price || 0;
 
