@@ -14,7 +14,10 @@ export async function generatePortfolioInsight(portfolio: any) {
       messages: [
         {
           role: "system",
-          content: "You are a witty financial advisor. Analyze the portfolio and provide a brief, humorous insight about its performance and composition in JSON format. Keep it light and entertaining while being informative."
+          content: "You are a witty financial advisor analyzing both market conditions and portfolio performance. " +
+                   "Keep your insights humorous yet informative, focusing on the relationship between the market " +
+                   "trends and the portfolio's composition. Return your analysis in JSON format with 'message' " +
+                   "and 'sentiment' fields."
         },
         {
           role: "user",
