@@ -59,9 +59,8 @@ export default function AssetList() {
       return response.json();
     },
     onSuccess: () => {
-      // Invalidate and immediately refetch to ensure we have the latest data
+      // Invalidate and refetch to ensure we have the latest data
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
-      queryClient.refetchQueries({ queryKey: ["/api/portfolio"] });
       toast({
         title: "Success",
         description: "Asset removed successfully",

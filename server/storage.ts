@@ -129,8 +129,7 @@ export class DatabaseStorage implements IStorage {
         .where(eq(portfolioItems.id, id));
 
       if (!itemToRemove) {
-        console.log('Item not found:', id);
-        return;
+        throw new Error('Portfolio item not found');
       }
 
       console.log('Found item to remove:', itemToRemove);
@@ -138,9 +137,7 @@ export class DatabaseStorage implements IStorage {
       // Get other portfolio items
       const otherItems = await db.select()
         .from(portfolioItems)
-        .where(
-          eq(portfolioItems.id, id).not()
-        );
+        .where(sql`${portfolioItems.id} != ${id}`);
 
       console.log('Other items count:', otherItems.length);
 

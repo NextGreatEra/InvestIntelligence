@@ -136,7 +136,9 @@ export function registerRoutes(app: Express) {
       res.json({ message: "Asset removed from portfolio" });
     } catch (error) {
       console.error("Portfolio item deletion error:", error);
-      res.status(500).json({ message: "Failed to remove asset from portfolio" });
+      res.status(500).json({ 
+        message: error instanceof Error ? error.message : "Failed to remove asset from portfolio" 
+      });
     }
   });
 
