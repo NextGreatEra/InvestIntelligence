@@ -26,11 +26,10 @@ export default function AssetList() {
     mutationFn: async ({id, allocation}: {id: number, allocation: number}) => {
       const response = await fetch(`/api/portfolio/${id}/allocation`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ allocation }),
       });
+      
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to update allocation");
@@ -38,15 +37,11 @@ export default function AssetList() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
-      toast({
-        title: "Allocation updated",
-        description: "Portfolio allocations have been updated",
-      });
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to update allocation",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -57,6 +52,7 @@ export default function AssetList() {
       const response = await fetch(`/api/portfolio/${id}`, {
         method: "DELETE",
       });
+      
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to remove asset");
@@ -66,18 +62,67 @@ export default function AssetList() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
       toast({
-        title: "Asset removed",
-        description: "The asset has been removed from your portfolio",
+        title: "Success",
+        description: "Asset removed successfully",
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to remove asset",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
+
+  const handleAllocationChange = async (assetId: number, newAllocation: number) => {
+    const asset = assets.find(a => a.id === assetId);
+    if (!asset) return;
+
+    const otherAssets = assets.filter(a => a.id !== assetId);
+    const totalRemaining = 100 - newAllocation;
+    
+    if (newAllocation < 0 || newAllocation > 100) {
+      toast({
+        title: "Invalid allocation",
+        description: "Allocation must be between 0 and 100%",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Calculate proportional allocations for other assets
+    const currentOtherTotal = otherAssets.reduce((sum, a) => sum + a.allocation, 0);
+    const scalingFactor = currentOtherTotal > 0 ? totalRemaining / currentOtherTotal : 0;
+
+    try {
+      // Update the changed asset first
+      await updateAllocationMutation.mutateAsync({
+        id: assetId,
+        allocation: newAllocation
+      });
+
+      // Update other assets proportionally
+      for (const otherAsset of otherAssets) {
+        const newOtherAllocation = currentOtherTotal > 0 
+          ? otherAsset.allocation * scalingFactor 
+          : totalRemaining / otherAssets.length;
+          
+        await updateAllocationMutation.mutateAsync({
+          id: otherAsset.id,
+          allocation: newOtherAllocation
+        });
+      }
+    } catch (error) {
+      console.error('Error updating allocations:', error);
+    }
+  };
+
+  const handleDelete = (assetId: number) => {
+    if (window.confirm('Are you sure you want to remove this asset?')) {
+      removeAssetMutation.mutate(assetId);
+    }
+  };
 
   if (isLoading) {
     return <AssetListSkeleton />;
@@ -85,60 +130,6 @@ export default function AssetList() {
 
   const sortedAssets = [...assets].sort((a, b) => a.rank - b.rank);
   const totalAllocation = sortedAssets.reduce((sum, asset) => sum + asset.allocation, 0);
-
-  const handleAllocationChange = (assetId: number, newAllocation: number) => {
-    const asset = assets.find(a => a.id === assetId);
-    if (!asset) return;
-
-    const otherAssets = assets.filter(a => a.id !== assetId);
-    const totalOtherAllocation = otherAssets.reduce((sum, a) => sum + a.allocation, 0);
-    
-    if (newAllocation + totalOtherAllocation > 100) {
-      toast({
-        title: "Invalid allocation",
-        description: "Total allocation cannot exceed 100%",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Calculate the scaling factor for other assets
-    const remainingAllocation = 100 - newAllocation;
-    const currentOtherTotal = totalOtherAllocation;
-    const scalingFactor = remainingAllocation / currentOtherTotal;
-
-    // Update all assets
-    const updates = otherAssets.map(otherAsset => {
-      const scaledAllocation = otherAsset.allocation * scalingFactor;
-      return updateAllocationMutation.mutateAsync({
-        id: otherAsset.id,
-        allocation: scaledAllocation,
-      });
-    });
-
-    // Update the changed asset
-    updates.push(
-      updateAllocationMutation.mutateAsync({
-        id: assetId,
-        allocation: newAllocation,
-      })
-    );
-
-    // Execute all updates
-    Promise.all(updates).catch(error => {
-      toast({
-        title: "Error",
-        description: "Failed to update allocations",
-        variant: "destructive",
-      });
-    });
-  };
-
-  const handleRemoveAsset = (assetId: number) => {
-    if (window.confirm("Are you sure you want to remove this asset?")) {
-      removeAssetMutation.mutate(assetId);
-    }
-  };
 
   return (
     <Card>
@@ -163,7 +154,7 @@ export default function AssetList() {
                 <div className="flex items-center gap-2">
                   <Slider
                     value={[asset.allocation]}
-                    onValueChange={(values) => handleAllocationChange(asset.id, values[0])}
+                    onValueChange={([value]) => handleAllocationChange(asset.id, value)}
                     max={100}
                     step={0.1}
                     className="w-32"
@@ -198,7 +189,7 @@ export default function AssetList() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleRemoveAsset(asset.id)}
+                  onClick={() => handleDelete(asset.id)}
                 >
                   <Trash2Icon className="h-4 w-4" />
                 </Button>
