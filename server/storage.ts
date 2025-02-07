@@ -1,6 +1,6 @@
 import { Asset, InsertAsset, PortfolioItem, InsertPortfolioItem, PriceHistory, priceHistory, assets, portfolioItems } from "@shared/schema";
 import { db } from "./db";
-import { eq, or, ilike, and, lte, desc, asc } from "drizzle-orm";
+import { eq, or, ilike, and, lte, desc, asc, sql } from "drizzle-orm";
 
 export interface IStorage {
   getAssets(): Promise<Asset[]>;
@@ -80,12 +80,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPortfolioItem(insertItem: InsertPortfolioItem): Promise<PortfolioItem> {
-    // Get the current highest rank
-    const [maxRankResult] = await db.select({
-      maxRank: db.fn.max(portfolioItems.rank)
-    }).from(portfolioItems);
+    // Get the current highest rank using a raw SQL query
+    const [result] = await db.execute<{ max_rank: number }>(
+      sql`SELECT COALESCE(MAX(rank), 0) as max_rank FROM portfolio_items`
+    );
 
-    const newRank = (maxRankResult?.maxRank || 0) + 1;
+    const newRank = (result?.max_rank || 0) + 1;
 
     const [item] = await db.insert(portfolioItems)
       .values({
@@ -94,6 +94,7 @@ export class DatabaseStorage implements IStorage {
         lastUpdated: new Date()
       })
       .returning();
+
     return item;
   }
 
@@ -128,7 +129,7 @@ export class DatabaseStorage implements IStorage {
       .from(priceHistory)
       .where(
         and(
-          eq(priceHistory.assetId, assetSymbol),
+          eq(priceHistory.assetId, Number(assetSymbol)),
           lte(priceHistory.timestamp, twentyFourHoursAgo)
         )
       )
