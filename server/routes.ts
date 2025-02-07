@@ -93,18 +93,25 @@ export function registerRoutes(app: Express) {
           if (!asset) return null;
 
           // Get 24h price history for the asset
+          let priceChange24h = 0;
           const priceHistory = await storage.getPriceHistory24h(asset.symbol);
-          const currentPrice = Number(asset.currentPrice);
-          const priceChange24h = priceHistory ? 
-            ((currentPrice - priceHistory.price) / priceHistory.price * 100)
-            : 0;
+          const currentPrice = parseFloat(asset.currentPrice);
 
-          console.log(`Price change for ${asset.symbol}:`, { currentPrice, historicalPrice: priceHistory?.price, priceChange24h });
+          if (priceHistory && priceHistory.price) {
+            const histPrice = parseFloat(priceHistory.price);
+            priceChange24h = ((currentPrice - histPrice) / histPrice) * 100;
+          }
+
+          console.log(`Price change for ${asset.symbol}:`, { 
+            currentPrice,
+            historicalPrice: priceHistory?.price,
+            priceChange24h
+          });
 
           return {
             ...asset,
             holdings: Number(item.quantity),
-            value: Number(item.quantity) * Number(asset.currentPrice),
+            value: Number(item.quantity) * currentPrice,
             priceChange24h
           };
         })
