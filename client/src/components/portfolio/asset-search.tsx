@@ -28,13 +28,24 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
     queryFn: async () => {
       try {
         const res = await fetch(`/api/assets/search?q=${encodeURIComponent(search)}`);
-        if (!res.ok) {
-          throw new Error("Failed to search assets");
-        }
         const data = await res.json();
+        
+        if (!res.ok) {
+          toast({
+            title: "Search Error",
+            description: data.message || "Failed to search assets",
+            variant: "destructive",
+          });
+          return [];
+        }
+        
         return Array.isArray(data) ? data : [];
       } catch (err) {
-        console.error("Search error:", err);
+        toast({
+          title: "Search Error",
+          description: "Failed to connect to search service",
+          variant: "destructive",
+        });
         return [];
       }
     }

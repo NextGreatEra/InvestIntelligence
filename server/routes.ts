@@ -24,33 +24,25 @@ export function registerRoutes(app: Express) {
     const { q } = req.query;
     if (!q || typeof q !== "string" || q.length < 2) {
       return res.status(400).json({ 
-        message: "Query parameter 'q' required",
-        details: "Search query must be at least 2 characters"
+        message: "Search query must be at least 2 characters"
       });
     }
 
     try {
       const results = await searchAssets(q);
-      if (!results || results.length === 0) {
+      const searchResults = results || [];
+      
+      if (searchResults.length === 0) {
         return res.status(404).json({ 
-          message: "No results found",
-          details: "The search returned no matching assets"
+          message: "No assets found matching your search"
         });
       }
 
-      const searchResults = results || [];
-      console.log('Search results:', { 
-        query: q,
-        resultCount: searchResults.length,
-        firstResult: searchResults[0]
-      });
-
       res.json(searchResults);
     } catch (error) {
-      console.error("Search error:", error instanceof Error ? error.message : error);
+      console.error("Search error:", error);
       res.status(500).json({ 
-        message: "Failed to search assets",
-        details: error instanceof Error ? error.message : "Unknown error occurred"
+        message: "Failed to search assets. Please try again."
       });
     }
   });
