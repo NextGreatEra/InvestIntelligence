@@ -13,8 +13,8 @@ export function registerRoutes(app: Express) {
       const results = await searchAssets("bitcoin");
       res.json({ status: "success", message: "API key is working" });
     } catch (error) {
-      res.status(500).json({
-        status: "error",
+      res.status(500).json({ 
+        status: "error", 
         message: error instanceof Error ? error.message : "API key validation failed"
       });
     }
@@ -24,7 +24,7 @@ export function registerRoutes(app: Express) {
   app.get("/api/assets/search", async (req, res) => {
     const { q, type } = req.query;
     if (!q || typeof q !== "string" || q.length < 2) {
-      return res.status(400).json({
+      return res.status(400).json({ 
         message: "Search query must be at least 2 characters"
       });
     }
@@ -32,7 +32,7 @@ export function registerRoutes(app: Express) {
     try {
       let results = [];
       const searchType = typeof type === 'string' ? type : undefined;
-
+      
       if (!searchType || searchType === 'crypto') {
         const cryptoResults = await searchCrypto(q);
         results = [...results, ...(cryptoResults || [])];
@@ -43,7 +43,7 @@ export function registerRoutes(app: Express) {
       }
 
       if (results.length === 0) {
-        return res.status(404).json({
+        return res.status(404).json({ 
           message: "No assets found matching your search"
         });
       }
@@ -51,7 +51,7 @@ export function registerRoutes(app: Express) {
       res.json(results);
     } catch (error) {
       console.error("Search error:", error);
-      res.status(500).json({
+      res.status(500).json({ 
         message: "Failed to search assets. Please try again."
       });
     }
@@ -62,13 +62,13 @@ export function registerRoutes(app: Express) {
       const { symbol } = req.params;
       const { type } = req.query;
       let price;
-
+      
       if (type === 'stock') {
         price = await getStockPrice(symbol.toUpperCase());
       } else {
         price = await getCryptoPrice(symbol.toUpperCase());
       }
-
+      
       console.log('Price fetched:', { symbol, type, price });
       if (!price) {
         return res.status(404).json({ message: "Price not found" });
@@ -92,45 +92,21 @@ export function registerRoutes(app: Express) {
           const asset = assets.find((a) => a.id === item.assetId);
           if (!asset) return null;
 
-          // Fetch current price and 24h change from appropriate API
-          let priceData;
-          try {
-            if (asset.type === 'stock') {
-              const stockData = await getStockPrice(asset.symbol);
-              priceData = {
-                price: stockData.price,
-                priceChange24h: stockData.priceChange24h
-              };
-            } else {
-              const cryptoData = await getCryptoPrice(asset.symbol);
-              priceData = {
-                price: cryptoData.price,
-                priceChange24h: cryptoData.priceChange24h
-              };
-            }
+          // Get 24h price history for the asset
+          const priceHistory = await storage.getPriceHistory24h(asset.symbol);
+          const currentPrice = Number(asset.currentPrice);
+          const priceChange24h = priceHistory ? 
+            ((currentPrice - priceHistory.price) / priceHistory.price * 100)
+            : 0;
 
-            console.log(`Price data for ${asset.symbol}:`, priceData);
+          console.log(`Price change for ${asset.symbol}:`, { currentPrice, historicalPrice: priceHistory?.price, priceChange24h });
 
-            // Update asset price in database
-            await storage.updateAssetPrice(asset.id, priceData.price);
-
-            return {
-              ...asset,
-              currentPrice: priceData.price.toString(),
-              holdings: Number(item.quantity),
-              value: Number(item.quantity) * priceData.price,
-              priceChange24h: priceData.priceChange24h
-            };
-          } catch (error) {
-            console.error(`Failed to fetch price data for ${asset.symbol}:`, error);
-            // Return asset with current stored values if API call fails
-            return {
-              ...asset,
-              holdings: Number(item.quantity),
-              value: Number(item.quantity) * Number(asset.currentPrice),
-              priceChange24h: 0
-            };
-          }
+          return {
+            ...asset,
+            holdings: Number(item.quantity),
+            value: Number(item.quantity) * Number(asset.currentPrice),
+            priceChange24h
+          };
         })
       );
 
@@ -148,7 +124,7 @@ export function registerRoutes(app: Express) {
 
       if (!symbol || !name || !currentPrice || !quantity) {
         console.log('Missing fields:', { symbol, name, currentPrice, quantity });
-        return res.status(400).json({
+        return res.status(400).json({ 
           message: "Missing required fields",
           details: { symbol, name, currentPrice, quantity }
         });
@@ -187,7 +163,7 @@ export function registerRoutes(app: Express) {
       });
     } catch (error) {
       console.error("Portfolio creation error:", error);
-      res.status(500).json({
+      res.status(500).json({ 
         message: "Failed to create portfolio item",
         details: error instanceof Error ? error.message : String(error)
       });
@@ -219,40 +195,33 @@ export function registerRoutes(app: Express) {
 
   app.get("/api/markets", async (req, res) => {
     try {
-      // First ensure assets exist in the database
-      const [btcAsset, ethAsset] = await Promise.all([
-        storage.getAssetBySymbol('BTC') || storage.createAsset({
-          symbol: 'BTC',
-          name: 'Bitcoin',
-          type: 'crypto',
-          currentPrice: '0'
-        }),
-        storage.getAssetBySymbol('ETH') || storage.createAsset({
-          symbol: 'ETH',
-          name: 'Ethereum',
-          type: 'crypto',
-          currentPrice: '0'
-        })
-      ]);
-
-      // Fetch current prices
+      // Fetch crypto data from CoinMarketCap
       const [btcPrice, ethPrice] = await Promise.all([
         getCryptoPrice('BTC'),
         getCryptoPrice('ETH')
       ]);
 
-      // Store current prices in history using proper asset IDs
+      // Fetch stock ETFs from Finnhub
+      const [spyPrice, qqqPrice] = await Promise.all([
+        getStockPrice('SPY'),
+        getStockPrice('QQQ')
+      ]);
+
+      // Store current prices in history
       await Promise.all([
-        storage.addPriceHistory({ assetId: btcAsset.id, price: btcPrice }),
-        storage.addPriceHistory({ assetId: ethAsset.id, price: ethPrice })
+        storage.addPriceHistory({ assetId: 'BTC', price: btcPrice }),
+        storage.addPriceHistory({ assetId: 'ETH', price: ethPrice }),
+        storage.addPriceHistory({ assetId: 'SPY', price: spyPrice }),
+        storage.addPriceHistory({ assetId: 'QQQ', price: qqqPrice })
       ]);
 
       // Get 24h ago prices
-      const [btcHistory, ethHistory] = await Promise.all([
+      const [btcHistory, ethHistory, spyHistory, qqqHistory] = await Promise.all([
         storage.getPriceHistory24h('BTC'),
-        storage.getPriceHistory24h('ETH')
+        storage.getPriceHistory24h('ETH'),
+        storage.getPriceHistory24h('SPY'),
+        storage.getPriceHistory24h('QQQ')
       ]);
-
 
       const markets = [
         {
@@ -270,6 +239,22 @@ export function registerRoutes(app: Express) {
           current_price: ethPrice,
           price_change_24h: ethHistory ? (ethPrice - ethHistory.price) : 0,
           price_change_percentage_24h: ethHistory ? ((ethPrice - ethHistory.price) / ethHistory.price * 100) : 0
+        },
+        {
+          id: 'sp500',
+          symbol: 'SPY',
+          name: 'S&P 500 ETF',
+          current_price: spyPrice,
+          price_change_24h: spyHistory ? (spyPrice - spyHistory.price) : 0,
+          price_change_percentage_24h: spyHistory ? ((spyPrice - spyHistory.price) / spyHistory.price * 100) : 0
+        },
+        {
+          id: 'nasdaq',
+          symbol: 'QQQ',
+          name: 'Nasdaq-100 ETF',
+          current_price: qqqPrice,
+          price_change_24h: qqqHistory ? (qqqPrice - qqqHistory.price) : 0,
+          price_change_percentage_24h: qqqHistory ? ((qqqPrice - qqqHistory.price) / qqqHistory.price * 100) : 0
         }
       ];
 

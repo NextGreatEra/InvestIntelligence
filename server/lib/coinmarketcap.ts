@@ -1,3 +1,4 @@
+
 const CMC_API = "https://pro-api.coinmarketcap.com/v1";
 import { storage } from "../storage";
 
@@ -29,7 +30,8 @@ async function refreshTopCoins() {
     `${CMC_API}/cryptocurrency/listings/latest?limit=250`,
     {
       headers: {
-        'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY
+        'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY,
+        'Accept': 'application/json'
       }
     }
   );
@@ -75,8 +77,7 @@ export async function searchAssets(query: string) {
       id: coin.id.toString(),
       symbol: coin.symbol,
       name: coin.name,
-      current_price: coin.quote.USD.price,
-      price_change_percentage_24h: coin.quote.USD.percent_change_24h || 0
+      current_price: coin.quote.USD.price
     }));
   } catch (error) {
     console.error('CoinMarketCap search error:', error);
@@ -84,14 +85,35 @@ export async function searchAssets(query: string) {
   }
 }
 
-export async function getPrice(symbol: string): Promise<{ price: number; priceChange24h: number }> {
+export async function getPrice(symbol: string): Promise<number> {
   try {
+    // First check our database
+    const asset = await storage.getAssetBySymbol(symbol);
+    if (asset) {
+      const lastUpdate = new Date(asset.lastUpdated);
+      const now = new Date();
+      // If price is less than 5 minutes old, use it
+      if (now.getTime() - lastUpdate.getTime() < 5 * 60 * 1000) {
+        return Number(asset.currentPrice);
+      }
+    }
+
+    // Check cache first
+    if (Date.now() - lastCacheUpdate <= CACHE_DURATION) {
+      const coin = topCoinsCache.find(c => c.symbol === symbol);
+      if (coin) {
+        return coin.quote.USD.price;
+      }
+    }
+
+    // Fallback to direct API call
     await enforceRateLimit();
     const response = await fetch(
       `${CMC_API}/cryptocurrency/quotes/latest?symbol=${symbol}`,
       {
         headers: {
-          'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY
+          'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY,
+          'Accept': 'application/json'
         }
       }
     );
@@ -101,21 +123,14 @@ export async function getPrice(symbol: string): Promise<{ price: number; priceCh
     }
 
     const data = await response.json();
-    const coinData = data.data[symbol];
-    if (!coinData?.quote?.USD) {
-      throw new Error(`No price data available for ${symbol}`);
-    }
+    const price = data.data[symbol]?.quote?.USD?.price || 0;
 
-    const price = coinData.quote.USD.price || 0;
-    const priceChange24h = coinData.quote.USD.percent_change_24h || 0;
-
-    // Update price in database if asset exists
-    const asset = await storage.getAssetBySymbol(symbol);
+    // Update price in database
     if (asset) {
       await storage.updateAssetPrice(asset.id, price);
     }
 
-    return { price, priceChange24h };
+    return price;
   } catch (error) {
     console.error('CoinMarketCap price error:', error);
     throw new Error('Failed to fetch price');
