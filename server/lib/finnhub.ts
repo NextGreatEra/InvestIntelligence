@@ -22,11 +22,14 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
     // Filter for NYSE and NASDAQ stocks only
     const filteredResults = (data.result || [])
       .filter((result: any) => {
-        const exchange = result.type?.toUpperCase();
-        return exchange === 'EQS' && 
+        return result.type?.toUpperCase() === 'COMMON STOCK' && 
                (result.exchange === 'NYSE' || result.exchange === 'NASDAQ');
       })
       .slice(0, 5);
+
+    if (filteredResults.length === 0) {
+      return [];
+    }
 
     // Fetch prices for filtered results
     const resultsWithPrices = await Promise.all(
