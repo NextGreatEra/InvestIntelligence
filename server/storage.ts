@@ -17,7 +17,7 @@ export interface IStorage {
   updatePortfolioItem(id: number, quantity: number): Promise<PortfolioItem>;
 
   // New price history methods
-  addPriceHistory(data: { assetId: string; price: number }): Promise<void>;
+  addPriceHistory(data: { assetId: number; price: number }): Promise<void>;
   getPriceHistory24h(assetSymbol: string): Promise<{ price: number } | null>;
 }
 
@@ -87,7 +87,7 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
-  async addPriceHistory(data: { assetId: string; price: number }): Promise<void> {
+  async addPriceHistory(data: { assetId: number; price: number }): Promise<void> {
     await db.insert(priceHistory).values({
       assetId: data.assetId,
       price: data.price.toString(),
@@ -98,6 +98,10 @@ export class DatabaseStorage implements IStorage {
   async getPriceHistory24h(assetSymbol: string): Promise<{ price: number } | null> {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
+    // First get the asset ID
+    const [asset] = await db.select().from(assets).where(eq(assets.symbol, assetSymbol.toUpperCase()));
+    if (!asset) return null;
+
     // Get the price closest to 24 hours ago
     const [historicalPrice] = await db
       .select({
@@ -106,7 +110,7 @@ export class DatabaseStorage implements IStorage {
       .from(priceHistory)
       .where(
         and(
-          eq(priceHistory.assetId, assetSymbol),
+          eq(priceHistory.assetId, asset.id),
           lte(priceHistory.timestamp, twentyFourHoursAgo)
         )
       )
