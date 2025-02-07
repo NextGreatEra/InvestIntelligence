@@ -39,13 +39,14 @@ export function registerRoutes(app: Express) {
         });
       }
 
+      const searchResults = results || [];
       console.log('Search results:', { 
         query: q,
-        resultCount: results.length,
-        firstResult: results[0]
+        resultCount: searchResults.length,
+        firstResult: searchResults[0]
       });
 
-      res.json(results);
+      res.json(searchResults);
     } catch (error) {
       console.error("Search error:", error instanceof Error ? error.message : error);
 

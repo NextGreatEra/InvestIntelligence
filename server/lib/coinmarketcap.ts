@@ -38,26 +38,12 @@ function validateApiKey() {
 }
 
 export async function searchAssets(query: string) {
+  if (!process.env.COINMARKETCAP_API_KEY) {
+    console.error('Missing COINMARKETCAP_API_KEY');
+    return [];
+  }
+
   try {
-    validateApiKey();
-
-    // First search in our database
-    const localAssets = await storage.searchAssets(query);
-    if (localAssets.length > 0) {
-      console.log(`Found ${localAssets.length} assets in local database`);
-      return localAssets.map(asset => ({
-        id: asset.id.toString(),
-        symbol: asset.symbol.toUpperCase(),
-        name: asset.name,
-        current_price: Number(asset.currentPrice)
-      }));
-    }
-
-    // If not found locally, search via CoinMarketCap
-    await enforceRateLimit();
-    
-    // Add search query to filter
-    const searchQuery = query.toLowerCase();
     const response = await fetch(
       `${CMC_API}/cryptocurrency/listings/latest?limit=20&sort=market_cap&sort_dir=desc`,
       {
@@ -69,14 +55,18 @@ export async function searchAssets(query: string) {
     );
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('CoinMarketCap API error:', errorData);
-      throw new Error(`CoinMarketCap API error: ${response.status} - ${errorData.status?.error_message || 'Unknown error'}`);
+      console.error('CoinMarketCap API error:', response.status);
+      return [];
     }
 
     const data = await response.json();
-    const allAssets = data.data || [];
-    const assets = allAssets.filter(asset => 
+    if (!data.data || !Array.isArray(data.data)) {
+      console.error('Invalid response format from CoinMarketCap');
+      return [];
+    }
+
+    const searchQuery = query.toLowerCase();
+    const assets = data.data.filter(asset => 
       asset.symbol.toLowerCase().includes(searchQuery) || 
       asset.name.toLowerCase().includes(searchQuery)
     ).slice(0, 5);
@@ -106,8 +96,8 @@ export async function searchAssets(query: string) {
 
     return results;
   } catch (error) {
-    console.error('CoinMarketCap search error:', error);
-    throw new Error('Failed to search assets');
+    console.error('CoinMarketCap API error:', error);
+    return [];
   }
 }
 
