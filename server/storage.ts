@@ -81,11 +81,11 @@ export class DatabaseStorage implements IStorage {
 
   async createPortfolioItem(insertItem: InsertPortfolioItem): Promise<PortfolioItem> {
     // Get the current highest rank using a raw SQL query
-    const [result] = await db.execute<{ max_rank: number }>(
-      sql`SELECT COALESCE(MAX(rank), 0) as max_rank FROM portfolio_items`
-    );
+    const result = await db.select({
+      maxRank: sql<number>`COALESCE(MAX(rank), 0)`
+    }).from(portfolioItems);
 
-    const newRank = (result?.max_rank || 0) + 1;
+    const newRank = (result[0]?.maxRank || 0) + 1;
 
     const [item] = await db.insert(portfolioItems)
       .values({
