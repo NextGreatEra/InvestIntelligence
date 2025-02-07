@@ -19,11 +19,12 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
 
     const data = await response.json();
     
-    // Filter for NYSE and NASDAQ stocks only
+    // Filter for stocks from major exchanges
     const filteredResults = (data.result || [])
       .filter((result: any) => {
-        return result.type?.toUpperCase() === 'COMMON STOCK' && 
-               (result.exchange === 'NYSE' || result.exchange === 'NASDAQ');
+        const type = result.type?.toUpperCase() || '';
+        return (type.includes('STOCK') || type === 'EQS') && 
+               result.symbol && result.description;
       })
       .slice(0, 5);
 
