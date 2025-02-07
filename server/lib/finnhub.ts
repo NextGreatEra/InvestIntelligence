@@ -24,11 +24,16 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
       .filter((result: any) => {
         const type = result.type?.toUpperCase() || '';
         const symbol = result.symbol || '';
-        // Only include US stocks (no foreign exchanges)
+        const description = result.description?.toUpperCase() || '';
+        const searchQuery = query.toUpperCase();
+        
+        // Only include US stocks (no foreign exchanges) and match either symbol or company name
         return (type.includes('STOCK') || type === 'EQS') && 
                result.symbol && 
                result.description &&
-               !symbol.includes('.') // Exclude foreign exchange symbols
+               !symbol.includes('.') && // Exclude foreign exchange symbols
+               (symbol.toUpperCase().includes(searchQuery) || 
+                description.includes(searchQuery))
       })
       .slice(0, 5);
 
