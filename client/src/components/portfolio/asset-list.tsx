@@ -60,7 +60,7 @@ export default function AssetList() {
                         : "text-red-500"
                     }
                   >
-                    {Math.abs(asset.priceChange24h).toFixed(2)}%
+                    {asset.priceChange24h ? Math.abs(asset.priceChange24h).toFixed(2) : '0.00'}%
                   </p>
                 </div>
               </div>
