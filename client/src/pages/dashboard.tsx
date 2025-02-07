@@ -1,5 +1,6 @@
 import AiInsights from "@/components/portfolio/ai-insights";
 import AssetList from "@/components/portfolio/asset-list";
+import Markets from "@/components/portfolio/markets";
 import PriceChart from "@/components/portfolio/price-chart";
 import { useQuery } from "@tanstack/react-query";
 
@@ -21,12 +22,15 @@ export default function Dashboard() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <AssetList />
-        <AiInsights />
+        <Markets />
       </div>
 
-      {history.length > 0 && (
-        <PriceChart data={history} symbol="BTC" />
-      )}
+      <div className="grid gap-6 md:grid-cols-2">
+        <AiInsights />
+        {history.length > 0 && (
+          <PriceChart data={history} symbol="BTC" />
+        )}
+      </div>
     </div>
   );
 }
