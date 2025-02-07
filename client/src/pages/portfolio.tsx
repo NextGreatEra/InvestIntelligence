@@ -23,13 +23,18 @@ export default function Portfolio() {
     mutationFn: async (data: {
       symbol: string;
       name: string;
-      current_price: number;
+      currentPrice: number;
       quantity: string;
     }) => {
       const res = await fetch("/api/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          symbol: data.symbol,
+          name: data.name,
+          currentPrice: data.currentPrice,
+          quantity: data.quantity
+        }),
       });
 
       if (!res.ok) {

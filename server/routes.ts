@@ -22,10 +22,10 @@ export function registerRoutes(app: Express) {
   // Asset routes
   app.get("/api/assets/search", async (req, res) => {
     const { q } = req.query;
-    if (!q || typeof q !== "string") {
+    if (!q || typeof q !== "string" || q.length < 2) {
       return res.status(400).json({ 
         message: "Query parameter 'q' required",
-        details: "Search query must be a non-empty string"
+        details: "Search query must be at least 2 characters"
       });
     }
 
