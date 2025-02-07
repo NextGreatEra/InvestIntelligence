@@ -1,7 +1,7 @@
-import { Asset, InsertAsset, PortfolioItem, InsertPortfolioItem } from "@shared/schema";
+import { Asset, InsertAsset, PortfolioItem, InsertPortfolioItem, PriceHistory, priceHistory } from "@shared/schema";
 import { assets, portfolioItems } from "@shared/schema";
 import { db } from "./db";
-import { eq, or, ilike } from "drizzle-orm";
+import { eq, or, ilike, and, lte, desc } from "drizzle-orm";
 
 export interface IStorage {
   getAssets(): Promise<Asset[]>;
@@ -15,6 +15,10 @@ export interface IStorage {
   getPortfolioItem(id: number): Promise<PortfolioItem | undefined>;
   createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem>;
   updatePortfolioItem(id: number, quantity: number): Promise<PortfolioItem>;
+
+  // New price history methods
+  addPriceHistory(data: { assetId: string; price: number }): Promise<void>;
+  getPriceHistory24h(assetSymbol: string): Promise<{ price: number } | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -28,8 +32,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAssetBySymbol(symbol: string): Promise<Asset | undefined> {
-    const [asset] = await db.select().from(assets)
-      .where(eq(assets.symbol, symbol.toUpperCase()));
+    const [asset] = await db.select().from(assets).where(eq(assets.symbol, symbol.toUpperCase()));
     return asset;
   }
 
@@ -66,15 +69,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPortfolioItem(id: number): Promise<PortfolioItem | undefined> {
-    const [item] = await db.select().from(portfolioItems)
-      .where(eq(portfolioItems.id, id));
+    const [item] = await db.select().from(portfolioItems).where(eq(portfolioItems.id, id));
     return item;
   }
 
   async createPortfolioItem(insertItem: InsertPortfolioItem): Promise<PortfolioItem> {
-    const [item] = await db.insert(portfolioItems)
-      .values(insertItem)
-      .returning();
+    const [item] = await db.insert(portfolioItems).values(insertItem).returning();
     return item;
   }
 
@@ -85,6 +85,39 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!item) throw new Error("Portfolio item not found");
     return item;
+  }
+
+  async addPriceHistory(data: { assetId: string; price: number }): Promise<void> {
+    await db.insert(priceHistory).values({
+      assetId: data.assetId,
+      price: data.price.toString(),
+      timestamp: new Date()
+    });
+  }
+
+  async getPriceHistory24h(assetSymbol: string): Promise<{ price: number } | null> {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // Get the price closest to 24 hours ago
+    const [historicalPrice] = await db
+      .select({
+        price: priceHistory.price
+      })
+      .from(priceHistory)
+      .where(
+        and(
+          eq(priceHistory.assetId, assetSymbol),
+          lte(priceHistory.timestamp, twentyFourHoursAgo)
+        )
+      )
+      .orderBy(desc(priceHistory.timestamp))
+      .limit(1);
+
+    if (!historicalPrice) return null;
+
+    return {
+      price: Number(historicalPrice.price)
+    };
   }
 }
 
