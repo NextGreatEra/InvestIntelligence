@@ -96,10 +96,20 @@ export function registerRoutes(app: Express) {
           let priceData;
           try {
             if (asset.type === 'stock') {
-              priceData = await getStockPrice(asset.symbol);
+              const stockData = await getStockPrice(asset.symbol);
+              priceData = {
+                price: stockData.price,
+                priceChange24h: stockData.priceChange24h
+              };
             } else {
-              priceData = await getCryptoPrice(asset.symbol);
+              const cryptoData = await getCryptoPrice(asset.symbol);
+              priceData = {
+                price: cryptoData.price,
+                priceChange24h: cryptoData.priceChange24h
+              };
             }
+
+            console.log(`Price data for ${asset.symbol}:`, priceData);
 
             // Update asset price in database
             await storage.updateAssetPrice(asset.id, priceData.price);
