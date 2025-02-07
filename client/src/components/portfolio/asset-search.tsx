@@ -62,51 +62,59 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent 
+        aria-describedby="asset-search-description"
+        className="sm:max-w-[425px]"
+      >
         <DialogHeader>
           <DialogTitle>Add Asset to Portfolio</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id="asset-search-description">
             Search for a cryptocurrency by name or symbol to add it to your portfolio.
           </DialogDescription>
         </DialogHeader>
-        <Command className="rounded-lg border shadow-md">
-          <CommandInput
-            placeholder="Search assets... (e.g. Bitcoin)"
-            value={search}
-            onValueChange={handleSearchChange}
-          />
-          <CommandList>
-            <CommandEmpty>
-              {search.length < 2 ? (
-                "Type at least 2 characters to search"
-              ) : isLoading ? (
-                <div className="flex items-center justify-center py-2">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Searching...
-                </div>
-              ) : (
-                "No results found"
-              )}
-            </CommandEmpty>
-            <CommandGroup heading="Assets">
-              {results.map((asset) => (
-                <CommandItem
-                  key={asset.id}
-                  onSelect={() => handleSelect(asset)}
-                  className="flex justify-between items-center"
-                >
-                  <div>
-                    <span className="font-medium">{asset.symbol.toUpperCase()}</span>
-                    <span className="ml-2 text-muted-foreground">{asset.name}</span>
+
+        <div className="mt-4">
+          <Command shouldFilter={false} className="rounded-lg border shadow-md">
+            <CommandInput
+              placeholder="Search assets... (e.g. Bitcoin)"
+              value={search}
+              onValueChange={handleSearchChange}
+            />
+            <CommandList>
+              <CommandEmpty>
+                {search.length < 2 ? (
+                  "Type at least 2 characters to search"
+                ) : isLoading ? (
+                  <div className="flex items-center justify-center py-2">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Searching...
                   </div>
-                  <span className="text-sm">
-                    ${asset.current_price?.toLocaleString() ?? 'N/A'}
-                  </span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+                ) : (
+                  "No results found"
+                )}
+              </CommandEmpty>
+              {results.length > 0 && (
+                <CommandGroup heading="Assets">
+                  {results.map((asset) => (
+                    <CommandItem
+                      key={asset.id}
+                      onSelect={() => handleSelect(asset)}
+                      className="flex justify-between items-center"
+                    >
+                      <div>
+                        <span className="font-medium">{asset.symbol.toUpperCase()}</span>
+                        <span className="ml-2 text-muted-foreground">{asset.name}</span>
+                      </div>
+                      <span className="text-sm">
+                        ${asset.current_price?.toLocaleString() ?? 'N/A'}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </div>
       </DialogContent>
     </Dialog>
   );
