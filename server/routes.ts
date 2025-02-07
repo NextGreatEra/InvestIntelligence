@@ -117,7 +117,22 @@ export function registerRoutes(app: Express) {
   app.delete("/api/portfolio/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      await storage.removePortfolioItem(Number(id));
+      const numericId = Number(id);
+
+      if (isNaN(numericId)) {
+        return res.status(400).json({ message: "Invalid portfolio item ID" });
+      }
+
+      // Verify the item exists before attempting deletion
+      const item = await storage.getPortfolioItem(numericId);
+      if (!item) {
+        return res.status(404).json({ message: "Portfolio item not found" });
+      }
+
+      console.log('Deleting portfolio item:', { id: numericId });
+      await storage.removePortfolioItem(numericId);
+
+      console.log('Portfolio item deleted successfully');
       res.json({ message: "Asset removed from portfolio" });
     } catch (error) {
       console.error("Portfolio item deletion error:", error);

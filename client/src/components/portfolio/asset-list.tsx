@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -52,7 +51,7 @@ export default function AssetList() {
       const response = await fetch(`/api/portfolio/${id}`, {
         method: "DELETE",
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to remove asset");
@@ -60,6 +59,7 @@ export default function AssetList() {
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate and immediately refetch to ensure we have the latest data
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
       queryClient.refetchQueries({ queryKey: ["/api/portfolio"] });
       toast({
@@ -68,6 +68,7 @@ export default function AssetList() {
       });
     },
     onError: (error: Error) => {
+      console.error('Delete error:', error);
       toast({
         title: "Error",
         description: error.message,

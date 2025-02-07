@@ -122,38 +122,63 @@ export class DatabaseStorage implements IStorage {
   }
 
   async removePortfolioItem(id: number): Promise<void> {
-    // Get the item to be removed and its allocation
-    const [itemToRemove] = await db.select()
-      .from(portfolioItems)
-      .where(eq(portfolioItems.id, id));
+    try {
+      // Get the item to be removed and its allocation
+      const [itemToRemove] = await db.select()
+        .from(portfolioItems)
+        .where(eq(portfolioItems.id, id));
 
-    if (!itemToRemove) return;
-
-    // Get other portfolio items
-    const otherItems = await db.select()
-      .from(portfolioItems)
-      .where(and(
-        eq(portfolioItems.id, id).not()
-      ));
-
-    const removedAllocation = Number(itemToRemove.allocation);
-    const remainingItemCount = otherItems.length;
-
-    if (remainingItemCount > 0) {
-      // Redistribute the allocation among remaining items
-      const redistributedAmount = removedAllocation / remainingItemCount;
-
-      for (const item of otherItems) {
-        await this.updatePortfolioAllocation(
-          item.id,
-          (Number(item.allocation) + redistributedAmount).toString()
-        );
+      if (!itemToRemove) {
+        console.log('Item not found:', id);
+        return;
       }
-    }
 
-    // Finally, remove the item
-    await db.delete(portfolioItems)
-      .where(eq(portfolioItems.id, id));
+      console.log('Found item to remove:', itemToRemove);
+
+      // Get other portfolio items
+      const otherItems = await db.select()
+        .from(portfolioItems)
+        .where(
+          eq(portfolioItems.id, id).not()
+        );
+
+      console.log('Other items count:', otherItems.length);
+
+      const removedAllocation = Number(itemToRemove.allocation);
+      const remainingItemCount = otherItems.length;
+
+      if (remainingItemCount > 0) {
+        // Redistribute the allocation among remaining items
+        const redistributedAmount = removedAllocation / remainingItemCount;
+
+        console.log('Redistributing allocation:', {
+          removedAllocation,
+          redistributedAmount,
+          remainingItemCount
+        });
+
+        for (const item of otherItems) {
+          const newAllocation = (Number(item.allocation) + redistributedAmount).toString();
+          console.log('Updating allocation for item:', {
+            itemId: item.id,
+            oldAllocation: item.allocation,
+            newAllocation
+          });
+
+          await this.updatePortfolioAllocation(item.id, newAllocation);
+        }
+      }
+
+      // Finally, remove the item
+      console.log('Executing delete query for item:', id);
+      await db.delete(portfolioItems)
+        .where(eq(portfolioItems.id, id));
+
+      console.log('Item deleted successfully');
+    } catch (error) {
+      console.error('Error in removePortfolioItem:', error);
+      throw error;
+    }
   }
 
   async addPriceHistory(data: { assetId: number; price: number }): Promise<void> {
