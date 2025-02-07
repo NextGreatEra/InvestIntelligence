@@ -94,9 +94,12 @@ export function registerRoutes(app: Express) {
 
           // Get 24h price history for the asset
           const priceHistory = await storage.getPriceHistory24h(asset.symbol);
+          const currentPrice = Number(asset.currentPrice);
           const priceChange24h = priceHistory ? 
-            ((Number(asset.currentPrice) - priceHistory.price) / priceHistory.price * 100)
-            : null;
+            ((currentPrice - priceHistory.price) / priceHistory.price * 100)
+            : 0;
+
+          console.log(`Price change for ${asset.symbol}:`, { currentPrice, historicalPrice: priceHistory?.price, priceChange24h });
 
           return {
             ...asset,
