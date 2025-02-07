@@ -4,8 +4,9 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, Command
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Asset } from "@shared/schema";
 
-interface Asset {
+interface AssetSearchResult {
   id: string;
   symbol: string;
   name: string;
@@ -13,7 +14,7 @@ interface Asset {
 }
 
 interface AssetSearchProps {
-  onSelect: (asset: Asset) => void;
+  onSelect: (asset: AssetSearchResult) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -22,14 +23,14 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
   const [search, setSearch] = useState("");
   const { toast } = useToast();
 
-  const { data: results = [], isLoading } = useQuery<Asset[]>({
+  const { data: results = [], isLoading } = useQuery<AssetSearchResult[]>({
     queryKey: ["/api/assets/search", search],
     enabled: search.length >= 2,
     queryFn: async () => {
       try {
         const res = await fetch(`/api/assets/search?q=${encodeURIComponent(search)}`);
         const data = await res.json();
-        
+
         if (!res.ok) {
           toast({
             title: "Search Error",
@@ -38,7 +39,7 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
           });
           return [];
         }
-        
+
         return Array.isArray(data) ? data : [];
       } catch (err) {
         toast({
@@ -51,7 +52,7 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
     }
   });
 
-  const handleSelect = useCallback((asset: Asset) => {
+  const handleSelect = useCallback((asset: AssetSearchResult) => {
     if (!asset.current_price) {
       toast({
         title: "Error",
@@ -104,7 +105,7 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
                 <CommandGroup heading="Assets">
                   {results.map((asset) => (
                     <CommandItem
-                      key={asset.id}
+                      key={`${asset.symbol}-${asset.id}`}
                       onSelect={() => handleSelect(asset)}
                       className="flex justify-between items-center"
                     >

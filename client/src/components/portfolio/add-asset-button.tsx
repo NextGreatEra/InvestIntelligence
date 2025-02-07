@@ -2,45 +2,53 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import AssetSearch from "./asset-search";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+
+interface AssetSearchResult {
+  id: string;
+  symbol: string;
+  name: string;
+  current_price: number;
+}
 
 export default function AddAssetButton() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const handleAssetSelect = async (asset: any) => {
-    try {
-      const response = await fetch("/api/portfolio", {
+  const addAssetMutation = useMutation({
+    mutationFn: async (asset: AssetSearchResult) => {
+      return apiRequest("/api/portfolio", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+        body: {
           symbol: asset.symbol,
           name: asset.name,
           currentPrice: asset.current_price,
           quantity: 1, // Default quantity
-        }),
+        },
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to add asset");
-      }
-
+    },
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
       toast({
         title: "Asset added",
-        description: `${asset.symbol} has been added to your portfolio`,
+        description: `${variables.symbol.toUpperCase()} has been added to your portfolio`,
       });
-    } catch (error) {
+      setOpen(false);
+    },
+    onError: (error: Error) => {
       toast({
         title: "Error",
-        description: "Failed to add asset to portfolio",
+        description: error.message || "Failed to add asset to portfolio",
         variant: "destructive",
       });
-    }
+    },
+  });
+
+  const handleAssetSelect = (asset: AssetSearchResult) => {
+    addAssetMutation.mutate(asset);
   };
 
   return (
