@@ -30,13 +30,6 @@ async function enforceRateLimit() {
   lastRequestTime = Date.now();
 }
 
-// Validate API key
-function validateApiKey() {
-  if (!process.env.COINMARKETCAP_API_KEY) {
-    throw new Error("COINMARKETCAP_API_KEY is not set");
-  }
-}
-
 export async function searchAssets(query: string) {
   if (!process.env.COINMARKETCAP_API_KEY) {
     console.error('Missing COINMARKETCAP_API_KEY');
@@ -44,11 +37,14 @@ export async function searchAssets(query: string) {
   }
 
   try {
+    await enforceRateLimit();
+
+    // Search using CoinMarketCap's search endpoint
     const response = await fetch(
-      `${CMC_API}/cryptocurrency/listings/latest?limit=20&sort=market_cap&sort_dir=desc`,
+      `${CMC_API}/cryptocurrency/search?query=${encodeURIComponent(query)}`,
       {
         headers: {
-          'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY,
+          'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY!,
           'Accept': 'application/json'
         }
       }
@@ -59,40 +55,59 @@ export async function searchAssets(query: string) {
       return [];
     }
 
-    const data = await response.json();
-    if (!data.data || !Array.isArray(data.data)) {
+    const searchData = await response.json();
+    if (!searchData.data || !Array.isArray(searchData.data.cryptocurrencies)) {
       console.error('Invalid response format from CoinMarketCap');
       return [];
     }
 
-    const searchQuery = query.toLowerCase();
-    const assets = data.data.filter(asset => 
-      asset.symbol.toLowerCase().includes(searchQuery) || 
-      asset.name.toLowerCase().includes(searchQuery)
-    ).slice(0, 5);
+    // Get top 5 results
+    const topResults = searchData.data.cryptocurrencies.slice(0, 5);
+    if (topResults.length === 0) return [];
 
-    // Store results in database for future use
-    const results = await Promise.all(assets.map(async (asset: CMCData) => {
-      const price = asset.quote.USD.price;
-      try {
-        // Store in database
-        await storage.createAsset({
-          symbol: asset.symbol,
-          name: asset.name,
-          type: 'crypto',
-          currentPrice: price.toString()
-        });
-      } catch (error) {
-        console.error('Failed to store asset:', error);
+    // Get latest quotes for these cryptocurrencies
+    const symbols = topResults.map(crypto => crypto.symbol).join(',');
+    await enforceRateLimit();
+
+    const quotesResponse = await fetch(
+      `${CMC_API}/cryptocurrency/quotes/latest?symbol=${symbols}`,
+      {
+        headers: {
+          'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY!,
+          'Accept': 'application/json'
+        }
       }
+    );
+
+    if (!quotesResponse.ok) {
+      console.error('CoinMarketCap quotes API error:', quotesResponse.status);
+      return [];
+    }
+
+    const quotesData = await quotesResponse.json();
+
+    // Map results with their current prices
+    const results = topResults.map(crypto => {
+      const quote = quotesData.data[crypto.symbol]?.quote?.USD;
+      const price = quote?.price || 0;
+
+      // Store in database for future reference
+      storage.createAsset({
+        symbol: crypto.symbol,
+        name: crypto.name,
+        type: 'crypto',
+        currentPrice: price.toString()
+      }).catch(error => {
+        console.error('Failed to store asset:', error);
+      });
 
       return {
-        id: asset.id.toString(),
-        symbol: asset.symbol,
-        name: asset.name,
+        id: crypto.id.toString(),
+        symbol: crypto.symbol,
+        name: crypto.name,
         current_price: price
       };
-    }));
+    });
 
     return results;
   } catch (error) {
@@ -103,7 +118,9 @@ export async function searchAssets(query: string) {
 
 export async function getPrice(symbol: string): Promise<number> {
   try {
-    validateApiKey();
+    if (!process.env.COINMARKETCAP_API_KEY) {
+      throw new Error("COINMARKETCAP_API_KEY is not set");
+    }
 
     // First check our database
     const asset = await storage.getAssetBySymbol(symbol);
@@ -116,8 +133,8 @@ export async function getPrice(symbol: string): Promise<number> {
       }
     }
 
-    // Otherwise fetch from API
     await enforceRateLimit();
+
     const response = await fetch(
       `${CMC_API}/cryptocurrency/quotes/latest?symbol=${symbol}`,
       {
