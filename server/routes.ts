@@ -31,11 +31,13 @@ export function registerRoutes(app: Express) {
 
     try {
       let results = [];
-      if (!type || type === 'crypto') {
+      const searchType = typeof type === 'string' ? type : undefined;
+      
+      if (!searchType || searchType === 'crypto') {
         const cryptoResults = await searchCrypto(q);
         results = [...results, ...(cryptoResults || [])];
       }
-      if (!type || type === 'stock') {
+      if (!searchType || searchType === 'stock') {
         const stockResults = await searchStocks(q);
         results = [...results, ...(stockResults || [])];
       }
