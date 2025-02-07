@@ -18,12 +18,29 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
     }
 
     const data = await response.json();
-    return (data.result || []).map((result: any) => ({
-      symbol: result.symbol,
-      name: result.description,
-      type: 'stock',
-      currentPrice: '0'
-    })).slice(0, 5);
+    
+    // Filter for NYSE and NASDAQ stocks only
+    const filteredResults = (data.result || [])
+      .filter((result: any) => {
+        const exchange = result.type?.toUpperCase();
+        return exchange === 'NYSE' || exchange === 'NASDAQ';
+      })
+      .slice(0, 5);
+
+    // Fetch prices for filtered results
+    const resultsWithPrices = await Promise.all(
+      filteredResults.map(async (result: any) => {
+        const price = await getStockPrice(result.symbol);
+        return {
+          symbol: result.symbol,
+          name: result.description,
+          type: 'stock',
+          currentPrice: price.toString()
+        };
+      })
+    );
+
+    return resultsWithPrices;
   } catch (error) {
     console.error('Finnhub search error:', error);
     return [];
