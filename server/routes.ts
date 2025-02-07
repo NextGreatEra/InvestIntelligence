@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { searchAssets, getPrice } from "./lib/coinmarketcap";
-import { generatePortfolioInsight } from "./lib/openai";
+import { searchAssets as searchCrypto, getPrice as getCryptoPrice } from "./lib/coinmarketcap";
+import { searchStocks, getStockPrice } from "./lib/finnhub";
 
 export function registerRoutes(app: Express) {
   const httpServer = createServer(app);
@@ -29,9 +29,9 @@ export function registerRoutes(app: Express) {
     }
 
     try {
-      const results = await searchAssets(q);
+      const results = await searchCrypto(q); // Assuming crypto search remains on CoinMarketCap
       const searchResults = results || [];
-      
+
       if (searchResults.length === 0) {
         return res.status(404).json({ 
           message: "No assets found matching your search"
@@ -49,7 +49,7 @@ export function registerRoutes(app: Express) {
 
   app.get("/api/assets/:symbol/price", async (req, res) => {
     try {
-      const price = await getPrice(req.params.symbol.toUpperCase());
+      const price = await getCryptoPrice(req.params.symbol.toUpperCase()); // Assuming crypto price remains on CoinMarketCap
       console.log('Price fetched:', { symbol: req.params.symbol, price });
       if (!price) {
         return res.status(404).json({ message: "Price not found" });
@@ -167,10 +167,10 @@ export function registerRoutes(app: Express) {
 
   app.get("/api/markets", async (req, res) => {
     try {
-      // Fetch BTC and ETH data
+      // Fetch BTC and ETH data.  This section needs significant modification to use Finnhub
       const [btcPrice, ethPrice] = await Promise.all([
-        getPrice('BTC'),
-        getPrice('ETH')
+        getCryptoPrice('BTC'), //Still using CoinMarketCap for crypto
+        getCryptoPrice('ETH')  //Still using CoinMarketCap for crypto
       ]);
 
       // Get historical prices from storage for 24h change
