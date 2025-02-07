@@ -173,17 +173,17 @@ export function registerRoutes(app: Express) {
         getCryptoPrice('ETH')
       ]);
 
-      // Fetch stock indices from Finnhub
-      const [spPrice, nasdaqPrice] = await Promise.all([
-        getStockPrice('^GSPC'),
-        getStockPrice('^IXIC')
+      // Fetch stock ETFs from Finnhub
+      const [spyPrice, qqqPrice] = await Promise.all([
+        getStockPrice('SPY'),
+        getStockPrice('QQQ')
       ]);
 
       // Get historical prices from storage for 24h change
       const btcAsset = await storage.getAssetBySymbol('BTC');
       const ethAsset = await storage.getAssetBySymbol('ETH');
-      const spAsset = await storage.getAssetBySymbol('^GSPC');
-      const nasdaqAsset = await storage.getAssetBySymbol('^IXIC');
+      const spyAsset = await storage.getAssetBySymbol('SPY');
+      const qqqAsset = await storage.getAssetBySymbol('QQQ');
 
       const markets = [
         {
@@ -204,19 +204,19 @@ export function registerRoutes(app: Express) {
         },
         {
           id: 'sp500',
-          symbol: '^GSPC',
-          name: 'S&P 500',
-          current_price: spPrice,
-          price_change_24h: spAsset ? (spPrice - Number(spAsset.currentPrice)) : 0,
-          price_change_percentage_24h: spAsset ? ((spPrice - Number(spAsset.currentPrice)) / Number(spAsset.currentPrice) * 100) : 0
+          symbol: 'SPY',
+          name: 'S&P 500 ETF',
+          current_price: spyPrice,
+          price_change_24h: spyAsset ? (spyPrice - Number(spyAsset.currentPrice)) : 0,
+          price_change_percentage_24h: spyAsset ? ((spyPrice - Number(spyAsset.currentPrice)) / Number(spyAsset.currentPrice) * 100) : 0
         },
         {
           id: 'nasdaq',
-          symbol: '^IXIC',
-          name: 'NASDAQ',
-          current_price: nasdaqPrice,
-          price_change_24h: nasdaqAsset ? (nasdaqPrice - Number(nasdaqAsset.currentPrice)) : 0,
-          price_change_percentage_24h: nasdaqAsset ? ((nasdaqPrice - Number(nasdaqAsset.currentPrice)) / Number(nasdaqAsset.currentPrice) * 100) : 0
+          symbol: 'QQQ',
+          name: 'Nasdaq-100 ETF',
+          current_price: qqqPrice,
+          price_change_24h: qqqAsset ? (qqqPrice - Number(qqqAsset.currentPrice)) : 0,
+          price_change_percentage_24h: qqqAsset ? ((qqqPrice - Number(qqqAsset.currentPrice)) / Number(qqqAsset.currentPrice) * 100) : 0
         }
       ];
 
