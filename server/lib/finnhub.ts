@@ -19,7 +19,6 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
 
     const data = await response.json();
     
-    // Filter for US stocks only to improve price fetch reliability
     const filteredResults = (data.result || [])
       .filter((result: any) => {
         const type = result.type?.toUpperCase() || '';
@@ -27,11 +26,10 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
         const description = result.description?.toUpperCase() || '';
         const searchQuery = query.toUpperCase();
         
-        // Only include US stocks (no foreign exchanges) and match either symbol or company name
         return (type.includes('STOCK') || type === 'EQS') && 
                result.symbol && 
                result.description &&
-               !symbol.includes('.') && // Exclude foreign exchange symbols
+               !symbol.includes('.') && 
                (symbol.toUpperCase().includes(searchQuery) || 
                 description.includes(searchQuery))
       })
@@ -41,7 +39,6 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
       return [];
     }
 
-    // Fetch prices for filtered results
     const resultsWithPrices = await Promise.all(
       filteredResults.map(async (result: any) => {
         try {
@@ -54,18 +51,19 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
           }
           
           const priceData = await quote.json();
-          if (typeof priceData.c !== 'number') {
+          
+          // The 'c' field is the current price
+          if (typeof priceData.c !== 'number' || isNaN(priceData.c)) {
             console.error(`Invalid price data for ${result.symbol}:`, priceData);
             return null;
           }
-          const price = priceData.c;
-          
+
           return {
             id: result.symbol,
             symbol: result.symbol,
             name: result.description,
             type: 'stock',
-            current_price: price
+            current_price: priceData.c
           };
         } catch (error) {
           console.error(`Failed to fetch price for ${result.symbol}:`, error);
@@ -96,12 +94,13 @@ export async function getStockPrice(symbol: string): Promise<number> {
     }
 
     const data = await response.json();
-    if (typeof data.c !== 'number') {
+    
+    // The 'c' field is the current price
+    if (typeof data.c !== 'number' || isNaN(data.c)) {
       throw new Error(`Invalid price data for ${symbol}`);
     }
-    const price = data.c;
-    
-    return price;
+
+    return data.c;
   } catch (error) {
     console.error('Finnhub price error:', error);
     throw error;
