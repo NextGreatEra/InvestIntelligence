@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 interface Asset {
   id: string;
@@ -25,9 +25,6 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
   const { data: results = [], isLoading } = useQuery<Asset[]>({
     queryKey: ["/api/assets/search", search],
     enabled: search.length >= 2,
-    retry: false,
-    staleTime: 30000,
-    gcTime: 60000,
     queryFn: async () => {
       try {
         const res = await fetch(`/api/assets/search?q=${encodeURIComponent(search)}`);
@@ -54,6 +51,7 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
     }
     onSelect(asset);
     onOpenChange(false);
+    setSearch(""); // Reset search when an asset is selected
   }, [onSelect, toast, onOpenChange]);
 
   const handleSearchChange = useCallback((value: string) => {
@@ -62,13 +60,10 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        aria-describedby="asset-search-description"
-        className="sm:max-w-[425px]"
-      >
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add Asset to Portfolio</DialogTitle>
-          <DialogDescription id="asset-search-description">
+          <DialogDescription>
             Search for a cryptocurrency by name or symbol to add it to your portfolio.
           </DialogDescription>
         </DialogHeader>
@@ -79,6 +74,7 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
               placeholder="Search assets... (e.g. Bitcoin)"
               value={search}
               onValueChange={handleSearchChange}
+              className="border-none focus:ring-0"
             />
             <CommandList>
               <CommandEmpty>
