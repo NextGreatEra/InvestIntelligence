@@ -27,7 +27,7 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
     enabled: search.length >= 2,
     queryFn: async () => {
       try {
-        const res = await fetch(`/api/assets/search?q=${encodeURIComponent(search)}`);
+        const res = await fetch(`/api/assets/search?q=${encodeURIComponent(search)}&type=stock,crypto`);
         const data = await res.json();
         
         if (!res.ok) {

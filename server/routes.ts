@@ -22,7 +22,7 @@ export function registerRoutes(app: Express) {
 
   // Asset routes
   app.get("/api/assets/search", async (req, res) => {
-    const { q } = req.query;
+    const { q, type } = req.query;
     if (!q || typeof q !== "string" || q.length < 2) {
       return res.status(400).json({ 
         message: "Search query must be at least 2 characters"
@@ -30,16 +30,23 @@ export function registerRoutes(app: Express) {
     }
 
     try {
-      const results = await searchCrypto(q); 
-      const searchResults = results || [];
+      let results = [];
+      if (!type || type === 'crypto') {
+        const cryptoResults = await searchCrypto(q);
+        results = [...results, ...(cryptoResults || [])];
+      }
+      if (!type || type === 'stock') {
+        const stockResults = await searchStocks(q);
+        results = [...results, ...(stockResults || [])];
+      }
 
-      if (searchResults.length === 0) {
+      if (results.length === 0) {
         return res.status(404).json({ 
           message: "No assets found matching your search"
         });
       }
 
-      res.json(searchResults);
+      res.json(results);
     } catch (error) {
       console.error("Search error:", error);
       res.status(500).json({ 
@@ -50,8 +57,17 @@ export function registerRoutes(app: Express) {
 
   app.get("/api/assets/:symbol/price", async (req, res) => {
     try {
-      const price = await getCryptoPrice(req.params.symbol.toUpperCase()); 
-      console.log('Price fetched:', { symbol: req.params.symbol, price });
+      const { symbol } = req.params;
+      const { type } = req.query;
+      let price;
+      
+      if (type === 'stock') {
+        price = await getStockPrice(symbol.toUpperCase());
+      } else {
+        price = await getCryptoPrice(symbol.toUpperCase());
+      }
+      
+      console.log('Price fetched:', { symbol, type, price });
       if (!price) {
         return res.status(404).json({ message: "Price not found" });
       }
