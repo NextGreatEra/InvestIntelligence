@@ -85,26 +85,23 @@ export function registerRoutes(app: Express) {
     try {
       const items = await storage.getPortfolioItems();
       const assets = await storage.getAssets();
-      console.log('Portfolio data:', { items, assets });
 
       const portfolio = await Promise.all(
         items.map(async (item) => {
           const asset = assets.find((a) => a.id === item.assetId);
           if (!asset) return null;
 
-          // Get 24h price history for the asset
           const priceHistory = await storage.getPriceHistory24h(asset.symbol);
           const currentPrice = Number(asset.currentPrice);
           const priceChange24h = priceHistory ? 
             ((currentPrice - priceHistory.price) / priceHistory.price * 100)
             : 0;
 
-          console.log(`Price change for ${asset.symbol}:`, { currentPrice, historicalPrice: priceHistory?.price, priceChange24h });
-
           return {
             ...asset,
-            holdings: Number(item.quantity),
-            value: Number(item.quantity) * Number(asset.currentPrice),
+            allocation: Number(item.allocation),
+            rank: item.rank,
+            value: Number(asset.currentPrice),
             priceChange24h
           };
         })
@@ -117,16 +114,44 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  app.delete("/api/portfolio/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.removePortfolioItem(Number(id));
+      res.json({ message: "Asset removed from portfolio" });
+    } catch (error) {
+      console.error("Portfolio item deletion error:", error);
+      res.status(500).json({ message: "Failed to remove asset from portfolio" });
+    }
+  });
+
+  app.patch("/api/portfolio/:id/rank", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { rank } = req.body;
+
+      if (typeof rank !== 'number') {
+        return res.status(400).json({ message: "Invalid rank value" });
+      }
+
+      const updatedItem = await storage.updatePortfolioRank(Number(id), rank);
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Rank update error:", error);
+      res.status(500).json({ message: "Failed to update asset rank" });
+    }
+  });
+
   app.post("/api/portfolio", async (req, res) => {
     console.log('Portfolio creation request:', req.body);
     try {
-      const { symbol, name, currentPrice, quantity } = req.body;
+      const { symbol, name, currentPrice, allocation } = req.body;
 
-      if (!symbol || !name || !currentPrice || !quantity) {
-        console.log('Missing fields:', { symbol, name, currentPrice, quantity });
+      if (!symbol || !name || !currentPrice || !allocation) {
+        console.log('Missing fields:', { symbol, name, currentPrice, allocation });
         return res.status(400).json({ 
           message: "Missing required fields",
-          details: { symbol, name, currentPrice, quantity }
+          details: { symbol, name, currentPrice, allocation }
         });
       }
 
@@ -135,7 +160,6 @@ export function registerRoutes(app: Express) {
       console.log('Existing asset:', asset);
 
       if (!asset) {
-        // Create new asset
         const assetData = {
           symbol,
           name,
@@ -149,8 +173,8 @@ export function registerRoutes(app: Express) {
       // Create portfolio item
       const portfolioItemData = {
         assetId: asset.id,
-        quantity: quantity.toString(),
-        averagePrice: currentPrice.toString(),
+        allocation: allocation.toString(),
+        rank: 0, // Will be set automatically in storage layer
       };
       console.log('Creating portfolio item:', portfolioItemData);
 
@@ -180,8 +204,8 @@ export function registerRoutes(app: Express) {
         if (!asset) return null;
         return {
           symbol: asset.symbol,
-          value: Number(item.quantity) * Number(asset.currentPrice),
-          profitLoss: (Number(asset.currentPrice) - Number(item.averagePrice)) * Number(item.quantity)
+          value: Number(item.allocation) * Number(asset.currentPrice), // Use allocation instead of quantity
+          profitLoss: (Number(asset.currentPrice) - Number(item.averagePrice)) * Number(item.allocation) // Use allocation instead of quantity
         };
       }).filter(Boolean);
 

@@ -14,8 +14,9 @@ export const assets = pgTable("assets", {
 export const portfolioItems = pgTable("portfolio_items", {
   id: serial("id").primaryKey(),
   assetId: integer("asset_id").notNull(),
-  quantity: decimal("quantity").notNull(),
-  averagePrice: decimal("average_price").notNull()
+  allocation: decimal("allocation").notNull(),
+  rank: integer("rank").notNull(),
+  lastUpdated: timestamp("last_updated").notNull().defaultNow()
 });
 
 export const priceHistory = pgTable("price_history", {
@@ -31,7 +32,8 @@ export const insertAssetSchema = createInsertSchema(assets).omit({
 });
 
 export const insertPortfolioItemSchema = createInsertSchema(portfolioItems).omit({ 
-  id: true 
+  id: true,
+  lastUpdated: true
 });
 
 export const insertPriceHistorySchema = createInsertSchema(priceHistory).omit({
@@ -47,7 +49,8 @@ export type PriceHistory = typeof priceHistory.$inferSelect;
 export type InsertPriceHistory = z.infer<typeof insertPriceHistorySchema>;
 
 export interface AssetWithDetails extends Asset {
-  holdings: number;
+  allocation: number;
+  rank: number;
   value: number;
-  profitLoss: number;
+  priceChange24h: number;
 }

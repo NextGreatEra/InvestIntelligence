@@ -1,11 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Asset } from "@shared/schema";
-import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
+import { ArrowUpIcon, ArrowDownIcon, Trash2Icon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface AssetWithDetails extends Asset {
-  holdings: number;
+  allocation: number;
+  rank: number;
   value: number;
   priceChange24h: number;
 }
@@ -14,10 +17,40 @@ export default function AssetList() {
   const { data: assets = [], isLoading } = useQuery<AssetWithDetails[]>({
     queryKey: ["/api/portfolio"],
   });
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const removeAssetMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/portfolio/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to remove asset");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+      toast({
+        title: "Asset removed",
+        description: "The asset has been removed from your portfolio",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove asset",
+        variant: "destructive",
+      });
+    },
+  });
 
   if (isLoading) {
     return <AssetListSkeleton />;
   }
+
+  const sortedAssets = [...assets].sort((a, b) => a.rank - b.rank);
 
   return (
     <Card>
@@ -26,24 +59,24 @@ export default function AssetList() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {assets.map((asset) => (
+          {sortedAssets.map((asset) => (
             <div
               key={asset.id}
               className="flex items-center justify-between p-4 rounded-lg bg-card border"
             >
-              <div>
+              <div className="flex-1">
                 <h3 className="font-medium">{asset.symbol}</h3>
                 <p className="text-sm text-muted-foreground">{asset.name}</p>
               </div>
-              <div className="text-right">
+              <div className="flex-1 text-right">
                 <p className="font-medium">
                   ${Number(asset.currentPrice).toLocaleString()}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {asset.holdings.toLocaleString()} units
+                  {asset.allocation.toFixed(2)}% Allocation
                 </p>
               </div>
-              <div className="text-right">
+              <div className="flex-1 text-right">
                 <p className="font-medium">
                   ${asset.value.toLocaleString()}
                 </p>
@@ -63,6 +96,15 @@ export default function AssetList() {
                     {asset.priceChange24h ? Math.abs(asset.priceChange24h).toFixed(2) : '0.00'}%
                   </p>
                 </div>
+              </div>
+              <div className="ml-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeAssetMutation.mutate(asset.id)}
+                >
+                  <Trash2Icon className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           ))}

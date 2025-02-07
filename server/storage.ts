@@ -1,7 +1,6 @@
-import { Asset, InsertAsset, PortfolioItem, InsertPortfolioItem, PriceHistory, priceHistory } from "@shared/schema";
-import { assets, portfolioItems } from "@shared/schema";
+import { Asset, InsertAsset, PortfolioItem, InsertPortfolioItem, PriceHistory, priceHistory, assets, portfolioItems } from "@shared/schema";
 import { db } from "./db";
-import { eq, or, ilike, and, lte, desc } from "drizzle-orm";
+import { eq, or, ilike, and, lte, desc, asc } from "drizzle-orm";
 
 export interface IStorage {
   getAssets(): Promise<Asset[]>;
@@ -10,14 +9,15 @@ export interface IStorage {
   createAsset(asset: InsertAsset): Promise<Asset>;
   updateAssetPrice(id: number, price: number): Promise<Asset>;
   searchAssets(query: string): Promise<Asset[]>;
+  removeAsset(id: number): Promise<void>;
 
   getPortfolioItems(): Promise<PortfolioItem[]>;
   getPortfolioItem(id: number): Promise<PortfolioItem | undefined>;
   createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem>;
-  updatePortfolioItem(id: number, quantity: number): Promise<PortfolioItem>;
+  updatePortfolioRank(id: number, newRank: number): Promise<PortfolioItem>;
+  removePortfolioItem(id: number): Promise<void>;
 
-  // New price history methods
-  addPriceHistory(data: { assetId: string; price: number }): Promise<void>;
+  addPriceHistory(data: { assetId: number; price: number }): Promise<void>;
   getPriceHistory24h(assetSymbol: string): Promise<{ price: number } | null>;
 }
 
@@ -64,8 +64,14 @@ export class DatabaseStorage implements IStorage {
     return asset;
   }
 
+  async removeAsset(id: number): Promise<void> {
+    await db.delete(assets).where(eq(assets.id, id));
+  }
+
   async getPortfolioItems(): Promise<PortfolioItem[]> {
-    return await db.select().from(portfolioItems);
+    return await db.select()
+      .from(portfolioItems)
+      .orderBy(asc(portfolioItems.rank));
   }
 
   async getPortfolioItem(id: number): Promise<PortfolioItem | undefined> {
@@ -74,20 +80,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPortfolioItem(insertItem: InsertPortfolioItem): Promise<PortfolioItem> {
-    const [item] = await db.insert(portfolioItems).values(insertItem).returning();
+    // Get the current highest rank
+    const [maxRankResult] = await db.select({
+      maxRank: db.fn.max(portfolioItems.rank)
+    }).from(portfolioItems);
+
+    const newRank = (maxRankResult?.maxRank || 0) + 1;
+
+    const [item] = await db.insert(portfolioItems)
+      .values({
+        ...insertItem,
+        rank: newRank,
+        lastUpdated: new Date()
+      })
+      .returning();
     return item;
   }
 
-  async updatePortfolioItem(id: number, quantity: number): Promise<PortfolioItem> {
+  async updatePortfolioRank(id: number, newRank: number): Promise<PortfolioItem> {
     const [item] = await db.update(portfolioItems)
-      .set({ quantity: quantity.toString() })
+      .set({ rank: newRank, lastUpdated: new Date() })
       .where(eq(portfolioItems.id, id))
       .returning();
     if (!item) throw new Error("Portfolio item not found");
     return item;
   }
 
-  async addPriceHistory(data: { assetId: string; price: number }): Promise<void> {
+  async removePortfolioItem(id: number): Promise<void> {
+    await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
+  }
+
+  async addPriceHistory(data: { assetId: number; price: number }): Promise<void> {
     await db.insert(priceHistory).values({
       assetId: data.assetId,
       price: data.price.toString(),
@@ -98,7 +121,6 @@ export class DatabaseStorage implements IStorage {
   async getPriceHistory24h(assetSymbol: string): Promise<{ price: number } | null> {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    // Get the price closest to 24 hours ago
     const [historicalPrice] = await db
       .select({
         price: priceHistory.price
