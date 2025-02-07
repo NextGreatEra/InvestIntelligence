@@ -20,15 +20,25 @@ export default function AddAssetButton() {
 
   const addAssetMutation = useMutation({
     mutationFn: async (asset: AssetSearchResult) => {
-      return apiRequest("/api/portfolio", {
+      const response = await fetch("/api/portfolio", {
         method: "POST",
-        body: {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           symbol: asset.symbol,
           name: asset.name,
           currentPrice: asset.current_price,
           quantity: 1, // Default quantity
-        },
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to add asset");
+      }
+
+      return response.json();
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
