@@ -15,6 +15,7 @@ export interface IStorage {
   getPortfolioItem(id: number): Promise<PortfolioItem | undefined>;
   createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem>;
   updatePortfolioRank(id: number, newRank: number): Promise<PortfolioItem>;
+  updatePortfolioAllocation(id: number, allocation: string): Promise<PortfolioItem>;
   removePortfolioItem(id: number): Promise<void>;
 
   addPriceHistory(data: { assetId: number; price: number }): Promise<void>;
@@ -107,8 +108,52 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
+  async updatePortfolioAllocation(id: number, allocation: string): Promise<PortfolioItem> {
+    const [item] = await db.update(portfolioItems)
+      .set({ 
+        allocation,
+        lastUpdated: new Date()
+      })
+      .where(eq(portfolioItems.id, id))
+      .returning();
+
+    if (!item) throw new Error("Portfolio item not found");
+    return item;
+  }
+
   async removePortfolioItem(id: number): Promise<void> {
-    await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
+    // Get the item to be removed and its allocation
+    const [itemToRemove] = await db.select()
+      .from(portfolioItems)
+      .where(eq(portfolioItems.id, id));
+
+    if (!itemToRemove) return;
+
+    // Get other portfolio items
+    const otherItems = await db.select()
+      .from(portfolioItems)
+      .where(and(
+        eq(portfolioItems.id, id).not()
+      ));
+
+    const removedAllocation = Number(itemToRemove.allocation);
+    const remainingItemCount = otherItems.length;
+
+    if (remainingItemCount > 0) {
+      // Redistribute the allocation among remaining items
+      const redistributedAmount = removedAllocation / remainingItemCount;
+
+      for (const item of otherItems) {
+        await this.updatePortfolioAllocation(
+          item.id,
+          (Number(item.allocation) + redistributedAmount).toString()
+        );
+      }
+    }
+
+    // Finally, remove the item
+    await db.delete(portfolioItems)
+      .where(eq(portfolioItems.id, id));
   }
 
   async addPriceHistory(data: { assetId: number; price: number }): Promise<void> {
