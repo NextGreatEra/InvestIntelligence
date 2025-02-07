@@ -92,30 +92,35 @@ export function registerRoutes(app: Express) {
           const asset = assets.find((a) => a.id === item.assetId);
           if (!asset) return null;
 
-          // Get 24h price history for the asset
-          const priceHistory = await storage.getPriceHistory24h(asset.symbol);
-          const currentPrice = Number(asset.currentPrice);
+          // Fetch current price and 24h change from appropriate API
+          let priceData;
+          try {
+            if (asset.type === 'stock') {
+              priceData = await getStockPrice(asset.symbol);
+            } else {
+              priceData = await getCryptoPrice(asset.symbol);
+            }
 
-          // Calculate price change percentage
-          let priceChange24h = 0;
-          if (priceHistory && typeof priceHistory.price === 'number') {
-            priceChange24h = ((currentPrice - priceHistory.price) / priceHistory.price) * 100;
-            console.log(`Price change calculation for ${asset.symbol}:`, {
-              currentPrice,
-              historicalPrice: priceHistory.price,
-              calculation: `((${currentPrice} - ${priceHistory.price}) / ${priceHistory.price}) * 100`,
-              priceChange24h
-            });
-          } else {
-            console.log(`No historical price found for ${asset.symbol}`);
+            // Update asset price in database
+            await storage.updateAssetPrice(asset.id, priceData.price);
+
+            return {
+              ...asset,
+              currentPrice: priceData.price.toString(),
+              holdings: Number(item.quantity),
+              value: Number(item.quantity) * priceData.price,
+              priceChange24h: priceData.priceChange24h
+            };
+          } catch (error) {
+            console.error(`Failed to fetch price data for ${asset.symbol}:`, error);
+            // Return asset with current stored values if API call fails
+            return {
+              ...asset,
+              holdings: Number(item.quantity),
+              value: Number(item.quantity) * Number(asset.currentPrice),
+              priceChange24h: 0
+            };
           }
-
-          return {
-            ...asset,
-            holdings: Number(item.quantity),
-            value: Number(item.quantity) * currentPrice,
-            priceChange24h
-          };
         })
       );
 
@@ -238,7 +243,7 @@ export function registerRoutes(app: Express) {
         storage.getPriceHistory24h('ETH')
       ]);
 
-      // Rest of the markets route remains unchanged
+
       const markets = [
         {
           id: 'bitcoin',

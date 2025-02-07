@@ -1,4 +1,3 @@
-
 import { Asset, InsertAsset } from '../../shared/schema';
 
 const FINNHUB_API = "https://finnhub.io/api/v1";
@@ -18,7 +17,7 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
     }
 
     const data = await response.json();
-    
+
     // Filter for US stocks only to improve price fetch reliability
     const filteredResults = (data.result || [])
       .filter((result: any) => {
@@ -26,12 +25,11 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
         const symbol = result.symbol || '';
         const description = result.description?.toUpperCase() || '';
         const searchQuery = query.toUpperCase();
-        
-        // Only include US stocks (no foreign exchanges) and match either symbol or company name
+
         return (type.includes('STOCK') || type === 'EQS') && 
                result.symbol && 
                result.description &&
-               !symbol.includes('.') && // Exclude foreign exchange symbols
+               !symbol.includes('.') && 
                (symbol.toUpperCase().includes(searchQuery) || 
                 description.includes(searchQuery))
       })
@@ -41,31 +39,35 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
       return [];
     }
 
-    // Fetch prices for filtered results
+    // Fetch quotes for filtered results
     const resultsWithPrices = await Promise.all(
       filteredResults.map(async (result: any) => {
         try {
           const quote = await fetch(
             `${FINNHUB_API}/quote?symbol=${encodeURIComponent(result.symbol)}&token=${process.env.FINNHUB_API_KEY}`
           );
-          
+
           if (!quote.ok) {
             throw new Error(`Quote API error: ${quote.status}`);
           }
-          
+
           const priceData = await quote.json();
-          const price = priceData.c; // Current price
-          
+          // c: Current price
+          // dp: Percentage change
+          const price = priceData.c;
+          const priceChange24h = priceData.dp; // Percentage change
+
           if (!price) {
             return null;
           }
-          
+
           return {
             id: result.symbol,
             symbol: result.symbol,
             name: result.description,
             type: 'stock',
-            current_price: price
+            current_price: price,
+            price_change_percentage_24h: priceChange24h || 0
           };
         } catch (error) {
           console.error(`Failed to fetch price for ${result.symbol}:`, error);
@@ -81,7 +83,7 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
   }
 }
 
-export async function getStockPrice(symbol: string): Promise<number> {
+export async function getStockPrice(symbol: string): Promise<{ price: number; priceChange24h: number }> {
   try {
     if (!process.env.FINNHUB_API_KEY) {
       throw new Error('Missing FINNHUB_API_KEY');
@@ -97,12 +99,13 @@ export async function getStockPrice(symbol: string): Promise<number> {
 
     const data = await response.json();
     const price = data.c || 0; // Current price
-    
+    const priceChange24h = data.dp || 0; // Percentage change
+
     if (!price) {
       throw new Error(`No price available for ${symbol}`);
     }
-    
-    return price;
+
+    return { price, priceChange24h };
   } catch (error) {
     console.error('Finnhub price error:', error);
     throw error;
