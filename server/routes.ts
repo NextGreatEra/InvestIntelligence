@@ -29,7 +29,7 @@ export function registerRoutes(app: Express) {
     }
 
     try {
-      const results = await searchCrypto(q); // Assuming crypto search remains on CoinMarketCap
+      const results = await searchCrypto(q); 
       const searchResults = results || [];
 
       if (searchResults.length === 0) {
@@ -49,7 +49,7 @@ export function registerRoutes(app: Express) {
 
   app.get("/api/assets/:symbol/price", async (req, res) => {
     try {
-      const price = await getCryptoPrice(req.params.symbol.toUpperCase()); // Assuming crypto price remains on CoinMarketCap
+      const price = await getCryptoPrice(req.params.symbol.toUpperCase()); 
       console.log('Price fetched:', { symbol: req.params.symbol, price });
       if (!price) {
         return res.status(404).json({ message: "Price not found" });
@@ -167,15 +167,23 @@ export function registerRoutes(app: Express) {
 
   app.get("/api/markets", async (req, res) => {
     try {
-      // Fetch BTC and ETH data.  This section needs significant modification to use Finnhub
+      // Fetch crypto data from CoinMarketCap
       const [btcPrice, ethPrice] = await Promise.all([
-        getCryptoPrice('BTC'), //Still using CoinMarketCap for crypto
-        getCryptoPrice('ETH')  //Still using CoinMarketCap for crypto
+        getCryptoPrice('BTC'),
+        getCryptoPrice('ETH')
+      ]);
+
+      // Fetch stock indices from Finnhub
+      const [spPrice, nasdaqPrice] = await Promise.all([
+        getStockPrice('^GSPC'),
+        getStockPrice('^IXIC')
       ]);
 
       // Get historical prices from storage for 24h change
       const btcAsset = await storage.getAssetBySymbol('BTC');
       const ethAsset = await storage.getAssetBySymbol('ETH');
+      const spAsset = await storage.getAssetBySymbol('^GSPC');
+      const nasdaqAsset = await storage.getAssetBySymbol('^IXIC');
 
       const markets = [
         {
@@ -193,6 +201,22 @@ export function registerRoutes(app: Express) {
           current_price: ethPrice,
           price_change_24h: ethAsset ? (ethPrice - Number(ethAsset.currentPrice)) : 0,
           price_change_percentage_24h: ethAsset ? ((ethPrice - Number(ethAsset.currentPrice)) / Number(ethAsset.currentPrice) * 100) : 0
+        },
+        {
+          id: 'sp500',
+          symbol: '^GSPC',
+          name: 'S&P 500',
+          current_price: spPrice,
+          price_change_24h: spAsset ? (spPrice - Number(spAsset.currentPrice)) : 0,
+          price_change_percentage_24h: spAsset ? ((spPrice - Number(spAsset.currentPrice)) / Number(spAsset.currentPrice) * 100) : 0
+        },
+        {
+          id: 'nasdaq',
+          symbol: '^IXIC',
+          name: 'NASDAQ',
+          current_price: nasdaqPrice,
+          price_change_24h: nasdaqAsset ? (nasdaqPrice - Number(nasdaqAsset.currentPrice)) : 0,
+          price_change_percentage_24h: nasdaqAsset ? ((nasdaqPrice - Number(nasdaqAsset.currentPrice)) / Number(nasdaqAsset.currentPrice) * 100) : 0
         }
       ];
 
