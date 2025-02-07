@@ -1,9 +1,9 @@
-
 import { useState, useCallback, memo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Asset {
   id: string;
@@ -14,9 +14,11 @@ interface Asset {
 
 interface AssetSearchProps {
   onSelect: (asset: Asset) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-const AssetSearch = ({ onSelect }: AssetSearchProps) => {
+const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
   const [search, setSearch] = useState("");
   const { toast } = useToast();
 
@@ -51,51 +53,62 @@ const AssetSearch = ({ onSelect }: AssetSearchProps) => {
       return;
     }
     onSelect(asset);
-  }, [onSelect, toast]);
+    onOpenChange(false);
+  }, [onSelect, toast, onOpenChange]);
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
   }, []);
 
   return (
-    <Command className="rounded-lg border shadow-md">
-      <CommandInput
-        placeholder="Search assets... (e.g. Bitcoin)"
-        value={search}
-        onValueChange={handleSearchChange}
-      />
-      <CommandList>
-        <CommandEmpty>
-          {search.length < 2 ? (
-            "Type at least 2 characters to search"
-          ) : isLoading ? (
-            <div className="flex items-center justify-center py-2">
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Searching...
-            </div>
-          ) : (
-            "No results found"
-          )}
-        </CommandEmpty>
-        <CommandGroup heading="Assets">
-          {results.map((asset) => (
-            <CommandItem
-              key={asset.id}
-              onSelect={() => handleSelect(asset)}
-              className="flex justify-between items-center"
-            >
-              <div>
-                <span className="font-medium">{asset.symbol.toUpperCase()}</span>
-                <span className="ml-2 text-muted-foreground">{asset.name}</span>
-              </div>
-              <span className="text-sm">
-                ${asset.current_price?.toLocaleString() ?? 'N/A'}
-              </span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      </CommandList>
-    </Command>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Asset to Portfolio</DialogTitle>
+          <DialogDescription>
+            Search for a cryptocurrency by name or symbol to add it to your portfolio.
+          </DialogDescription>
+        </DialogHeader>
+        <Command className="rounded-lg border shadow-md">
+          <CommandInput
+            placeholder="Search assets... (e.g. Bitcoin)"
+            value={search}
+            onValueChange={handleSearchChange}
+          />
+          <CommandList>
+            <CommandEmpty>
+              {search.length < 2 ? (
+                "Type at least 2 characters to search"
+              ) : isLoading ? (
+                <div className="flex items-center justify-center py-2">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Searching...
+                </div>
+              ) : (
+                "No results found"
+              )}
+            </CommandEmpty>
+            <CommandGroup heading="Assets">
+              {results.map((asset) => (
+                <CommandItem
+                  key={asset.id}
+                  onSelect={() => handleSelect(asset)}
+                  className="flex justify-between items-center"
+                >
+                  <div>
+                    <span className="font-medium">{asset.symbol.toUpperCase()}</span>
+                    <span className="ml-2 text-muted-foreground">{asset.name}</span>
+                  </div>
+                  <span className="text-sm">
+                    ${asset.current_price?.toLocaleString() ?? 'N/A'}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </DialogContent>
+    </Dialog>
   );
 };
 
