@@ -16,7 +16,7 @@ interface Asset {
 
 export default function Portfolio() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [quantity, setQuantity] = useState("");
+  const [allocation, setAllocation] = useState("");
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const { toast } = useToast();
 
@@ -25,17 +25,12 @@ export default function Portfolio() {
       symbol: string;
       name: string;
       currentPrice: number;
-      quantity: string;
+      allocation: number;
     }) => {
       const res = await fetch("/api/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          symbol: data.symbol,
-          name: data.name,
-          currentPrice: data.currentPrice,
-          quantity: data.quantity
-        }),
+        body: JSON.stringify(data),
       });
 
       if (!res.ok) {
@@ -49,7 +44,7 @@ export default function Portfolio() {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
       setIsDialogOpen(false);
       setSelectedAsset(null);
-      setQuantity("");
+      setAllocation("");
       toast({
         title: "Success",
         description: "Asset added to portfolio successfully.",
@@ -68,25 +63,25 @@ export default function Portfolio() {
     setSelectedAsset(asset);
   }, []);
 
-  const handleQuantityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuantity(e.target.value);
+  const handleAllocationChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setAllocation(e.target.value);
   }, []);
 
   const handleAddAsset = useCallback(() => {
-    if (!selectedAsset || !quantity) {
+    if (!selectedAsset || !allocation) {
       toast({
         title: "Error",
-        description: "Please select an asset and enter quantity",
+        description: "Please select an asset and enter allocation",
         variant: "destructive",
       });
       return;
     }
 
-    const numericQuantity = parseFloat(quantity);
-    if (isNaN(numericQuantity) || numericQuantity <= 0) {
+    const numericAllocation = parseFloat(allocation);
+    if (isNaN(numericAllocation) || numericAllocation <= 0) {
       toast({
         title: "Error",
-        description: "Please enter a valid quantity greater than 0",
+        description: "Please enter a valid allocation greater than 0",
         variant: "destructive",
       });
       return;
@@ -96,9 +91,9 @@ export default function Portfolio() {
       symbol: selectedAsset.symbol,
       name: selectedAsset.name,
       currentPrice: selectedAsset.current_price,
-      quantity
+      allocation: numericAllocation
     });
-  }, [selectedAsset, quantity, toast, addAssetMutation]);
+  }, [selectedAsset, allocation, toast, addAssetMutation]);
 
   return (
     <div className="space-y-6">

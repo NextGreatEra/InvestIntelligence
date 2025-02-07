@@ -29,7 +29,8 @@ export default function AddAssetButton() {
           symbol: asset.symbol,
           name: asset.name,
           currentPrice: asset.current_price,
-          quantity: 1, // Default quantity
+          allocation: 100, // Default allocation of 100%
+          type: 'crypto' // Default type
         }),
       });
 
