@@ -289,5 +289,37 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  app.patch("/api/portfolio/:id/allocation", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { allocation } = req.body;
+
+      if (typeof allocation !== 'number' || allocation < 0 || allocation > 100) {
+        return res.status(400).json({ message: "Invalid allocation value" });
+      }
+
+      // Get current portfolio to validate total allocation
+      const items = await storage.getPortfolioItems();
+      const otherItems = items.filter(item => item.id !== Number(id));
+      const totalOtherAllocation = otherItems.reduce(
+        (sum, item) => sum + Number(item.allocation),
+        0
+      );
+
+      if (totalOtherAllocation + allocation > 100) {
+        return res.status(400).json({ 
+          message: "Total portfolio allocation cannot exceed 100%" 
+        });
+      }
+
+      // Update the allocation
+      await storage.updatePortfolioAllocation(Number(id), allocation.toString());
+      res.json({ message: "Allocation updated successfully" });
+    } catch (error) {
+      console.error("Allocation update error:", error);
+      res.status(500).json({ message: "Failed to update allocation" });
+    }
+  });
+
   return httpServer;
 }
