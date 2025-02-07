@@ -131,7 +131,7 @@ export function registerRoutes(app: Express) {
       const portfolioItemData = {
         assetId: asset.id,
         quantity: quantity.toString(),
-        averagePrice: current_price.toString(),
+        averagePrice: currentPrice.toString(),
       };
       console.log('Creating portfolio item:', portfolioItemData);
 
