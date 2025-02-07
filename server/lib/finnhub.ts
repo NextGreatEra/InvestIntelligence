@@ -54,11 +54,11 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
           }
           
           const priceData = await quote.json();
-          const price = priceData.c; // Current price
-          
-          if (!price) {
+          if (typeof priceData.c !== 'number') {
+            console.error(`Invalid price data for ${result.symbol}:`, priceData);
             return null;
           }
+          const price = priceData.c;
           
           return {
             id: result.symbol,
