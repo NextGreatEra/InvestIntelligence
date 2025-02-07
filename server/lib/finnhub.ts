@@ -19,12 +19,16 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
 
     const data = await response.json();
     
-    // Filter for stocks from major exchanges
+    // Filter for US stocks only to improve price fetch reliability
     const filteredResults = (data.result || [])
       .filter((result: any) => {
         const type = result.type?.toUpperCase() || '';
+        const symbol = result.symbol || '';
+        // Only include US stocks (no foreign exchanges)
         return (type.includes('STOCK') || type === 'EQS') && 
-               result.symbol && result.description;
+               result.symbol && 
+               result.description &&
+               !symbol.includes('.') // Exclude foreign exchange symbols
       })
       .slice(0, 5);
 
@@ -36,8 +40,21 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
     const resultsWithPrices = await Promise.all(
       filteredResults.map(async (result: any) => {
         try {
-          const price = await getStockPrice(result.symbol);
-          console.log(`Fetched price for ${result.symbol}:`, price);
+          const quote = await fetch(
+            `${FINNHUB_API}/quote?symbol=${encodeURIComponent(result.symbol)}&token=${process.env.FINNHUB_API_KEY}`
+          );
+          
+          if (!quote.ok) {
+            throw new Error(`Quote API error: ${quote.status}`);
+          }
+          
+          const priceData = await quote.json();
+          const price = priceData.c; // Current price
+          
+          if (!price) {
+            return null;
+          }
+          
           return {
             symbol: result.symbol,
             name: result.description,
