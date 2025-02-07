@@ -1,11 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Asset } from "@shared/schema";
 import { ArrowUpIcon, ArrowDownIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Slider } from "@/components/ui/slider";
+import { queryClient } from "@/lib/queryClient";
 
 interface AssetWithDetails extends Asset {
   allocation: number;
@@ -18,8 +19,37 @@ export default function AssetList() {
   const { data: assets = [], isLoading } = useQuery<AssetWithDetails[]>({
     queryKey: ["/api/portfolio"],
   });
-  const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const removeAssetMutation = useMutation({
+    mutationFn: async (assetId: number) => {
+      console.log('Attempting to delete asset with ID:', assetId);
+      const response = await fetch(`/api/portfolio/${assetId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to remove asset");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+      toast({
+        title: "Success",
+        description: "Asset removed successfully",
+      });
+    },
+    onError: (error: Error) => {
+      console.error('Delete error:', error);
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const updateAllocationMutation = useMutation({
     mutationFn: async ({id, allocation}: {id: number, allocation: number}) => {
@@ -38,36 +68,6 @@ export default function AssetList() {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const removeAssetMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await fetch(`/api/portfolio/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to remove asset");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      // Invalidate and refetch to ensure we have the latest data
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
-      toast({
-        title: "Success",
-        description: "Asset removed successfully",
-      });
-    },
-    onError: (error: Error) => {
-      console.error('Delete error:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -120,6 +120,7 @@ export default function AssetList() {
   };
 
   const handleDelete = (assetId: number) => {
+    console.log('Delete requested for asset:', assetId);
     if (window.confirm('Are you sure you want to remove this asset?')) {
       removeAssetMutation.mutate(assetId);
     }
