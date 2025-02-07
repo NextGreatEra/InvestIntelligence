@@ -175,5 +175,43 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  app.get("/api/markets", async (req, res) => {
+    try {
+      // Fetch BTC and ETH data
+      const [btcPrice, ethPrice] = await Promise.all([
+        getPrice('BTC'),
+        getPrice('ETH')
+      ]);
+
+      // Get historical prices from storage for 24h change
+      const btcAsset = await storage.getAssetBySymbol('BTC');
+      const ethAsset = await storage.getAssetBySymbol('ETH');
+
+      const markets = [
+        {
+          id: 'bitcoin',
+          symbol: 'BTC',
+          name: 'Bitcoin',
+          current_price: btcPrice,
+          price_change_24h: btcAsset ? (btcPrice - Number(btcAsset.currentPrice)) : 0,
+          price_change_percentage_24h: btcAsset ? ((btcPrice - Number(btcAsset.currentPrice)) / Number(btcAsset.currentPrice) * 100) : 0
+        },
+        {
+          id: 'ethereum',
+          symbol: 'ETH',
+          name: 'Ethereum',
+          current_price: ethPrice,
+          price_change_24h: ethAsset ? (ethPrice - Number(ethAsset.currentPrice)) : 0,
+          price_change_percentage_24h: ethAsset ? ((ethPrice - Number(ethAsset.currentPrice)) / Number(ethAsset.currentPrice) * 100) : 0
+        }
+      ];
+
+      res.json(markets);
+    } catch (error) {
+      console.error("Markets fetch error:", error);
+      res.status(500).json({ message: "Failed to fetch market data" });
+    }
+  });
+
   return httpServer;
 }
