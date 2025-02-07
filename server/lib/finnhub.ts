@@ -23,24 +23,31 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
     const filteredResults = (data.result || [])
       .filter((result: any) => {
         const exchange = result.type?.toUpperCase();
-        return exchange === 'NYSE' || exchange === 'NASDAQ';
+        return exchange === 'EQS' && 
+               (result.exchange === 'NYSE' || result.exchange === 'NASDAQ');
       })
       .slice(0, 5);
 
     // Fetch prices for filtered results
     const resultsWithPrices = await Promise.all(
       filteredResults.map(async (result: any) => {
-        const price = await getStockPrice(result.symbol);
-        return {
-          symbol: result.symbol,
-          name: result.description,
-          type: 'stock',
-          currentPrice: price.toString()
-        };
+        try {
+          const price = await getStockPrice(result.symbol);
+          console.log(`Fetched price for ${result.symbol}:`, price);
+          return {
+            symbol: result.symbol,
+            name: result.description,
+            type: 'stock',
+            currentPrice: price.toString()
+          };
+        } catch (error) {
+          console.error(`Failed to fetch price for ${result.symbol}:`, error);
+          return null;
+        }
       })
     );
 
-    return resultsWithPrices;
+    return resultsWithPrices.filter(result => result !== null);
   } catch (error) {
     console.error('Finnhub search error:', error);
     return [];
@@ -62,9 +69,15 @@ export async function getStockPrice(symbol: string): Promise<number> {
     }
 
     const data = await response.json();
-    return data.c || 0; // Current price
+    const price = data.c || 0; // Current price
+    
+    if (!price) {
+      throw new Error(`No price available for ${symbol}`);
+    }
+    
+    return price;
   } catch (error) {
     console.error('Finnhub price error:', error);
-    throw new Error('Failed to fetch price');
+    throw error;
   }
 }
