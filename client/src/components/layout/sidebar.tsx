@@ -26,18 +26,18 @@ export default function Sidebar() {
         {navigation.map((item) => {
           const isActive = location === item.href;
           return (
-            <Link key={item.name} href={item.href}>
-              <a
-                className={cn(
-                  "flex items-center gap-x-3 rounded-md px-3 py-2 text-sm font-medium",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.name}
-              </a>
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-x-3 rounded-md px-3 py-2 text-sm font-medium",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+              )}
+            >
+              <item.icon className="h-5 w-5" />
+              {item.name}
             </Link>
           );
         })}
