@@ -61,6 +61,7 @@ export default function AssetList() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+      queryClient.refetchQueries({ queryKey: ["/api/portfolio"] });
       toast({
         title: "Success",
         description: "Asset removed successfully",
