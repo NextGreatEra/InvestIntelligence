@@ -56,10 +56,11 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
           }
           
           return {
+            id: result.symbol,
             symbol: result.symbol,
             name: result.description,
             type: 'stock',
-            currentPrice: price.toString()
+            current_price: price
           };
         } catch (error) {
           console.error(`Failed to fetch price for ${result.symbol}:`, error);

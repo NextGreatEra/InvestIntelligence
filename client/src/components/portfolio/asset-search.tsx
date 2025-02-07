@@ -113,7 +113,7 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
                         <span className="ml-2 text-muted-foreground">{asset.name}</span>
                       </div>
                       <span className="text-sm">
-                        ${asset.current_price?.toLocaleString() ?? 'N/A'}
+                        ${typeof asset.current_price === 'number' ? asset.current_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'N/A'}
                       </span>
                     </CommandItem>
                   ))}
