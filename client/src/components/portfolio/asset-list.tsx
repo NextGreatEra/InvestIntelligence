@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,6 +61,7 @@ export default function AssetList() {
         const error = await response.json();
         throw new Error(error.message || "Failed to remove asset");
       }
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
@@ -89,9 +91,9 @@ export default function AssetList() {
     if (!asset) return;
 
     const otherAssets = assets.filter(a => a.id !== assetId);
-    const otherTotalAllocation = otherAssets.reduce((sum, a) => sum + a.allocation, 0);
-
-    if (newAllocation + otherTotalAllocation > 100) {
+    const totalOtherAllocation = otherAssets.reduce((sum, a) => sum + a.allocation, 0);
+    
+    if (newAllocation + totalOtherAllocation > 100) {
       toast({
         title: "Invalid allocation",
         description: "Total allocation cannot exceed 100%",
@@ -100,10 +102,42 @@ export default function AssetList() {
       return;
     }
 
-    updateAllocationMutation.mutate({
-      id: assetId,
-      allocation: newAllocation,
+    // Calculate the scaling factor for other assets
+    const remainingAllocation = 100 - newAllocation;
+    const currentOtherTotal = totalOtherAllocation;
+    const scalingFactor = remainingAllocation / currentOtherTotal;
+
+    // Update all assets
+    const updates = otherAssets.map(otherAsset => {
+      const scaledAllocation = otherAsset.allocation * scalingFactor;
+      return updateAllocationMutation.mutateAsync({
+        id: otherAsset.id,
+        allocation: scaledAllocation,
+      });
     });
+
+    // Update the changed asset
+    updates.push(
+      updateAllocationMutation.mutateAsync({
+        id: assetId,
+        allocation: newAllocation,
+      })
+    );
+
+    // Execute all updates
+    Promise.all(updates).catch(error => {
+      toast({
+        title: "Error",
+        description: "Failed to update allocations",
+        variant: "destructive",
+      });
+    });
+  };
+
+  const handleRemoveAsset = (assetId: number) => {
+    if (window.confirm("Are you sure you want to remove this asset?")) {
+      removeAssetMutation.mutate(assetId);
+    }
   };
 
   return (
@@ -164,11 +198,7 @@ export default function AssetList() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => {
-                    if (window.confirm("Are you sure you want to remove this asset?")) {
-                      removeAssetMutation.mutate(asset.id);
-                    }
-                  }}
+                  onClick={() => handleRemoveAsset(asset.id)}
                 >
                   <Trash2Icon className="h-4 w-4" />
                 </Button>
