@@ -164,7 +164,10 @@ export default function AssetList() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => removeAssetMutation.mutate(asset.id)}
+                  onClick={() => {
+                    console.log('Deleting asset:', asset.id);
+                    removeAssetMutation.mutate(asset.id);
+                  }}
                 >
                   <Trash2Icon className="h-4 w-4" />
                 </Button>

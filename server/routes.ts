@@ -145,13 +145,13 @@ export function registerRoutes(app: Express) {
   app.post("/api/portfolio", async (req, res) => {
     console.log('Portfolio creation request:', req.body);
     try {
-      const { symbol, name, currentPrice, allocation } = req.body;
+      const { symbol, name, currentPrice, type = 'crypto' } = req.body;
 
-      if (!symbol || !name || !currentPrice || !allocation) {
-        console.log('Missing fields:', { symbol, name, currentPrice, allocation });
+      if (!symbol || !name || !currentPrice) {
+        console.log('Missing fields:', { symbol, name, currentPrice });
         return res.status(400).json({ 
           message: "Missing required fields",
-          details: { symbol, name, currentPrice, allocation }
+          details: { symbol, name, currentPrice }
         });
       }
 
@@ -163,17 +163,27 @@ export function registerRoutes(app: Express) {
         const assetData = {
           symbol,
           name,
-          type: 'crypto',
+          type,
           currentPrice: currentPrice.toString(),
         };
         console.log('Creating new asset:', assetData);
         asset = await storage.createAsset(assetData);
       }
 
-      // Create portfolio item
+      // Get current portfolio items to calculate allocation
+      const currentItems = await storage.getPortfolioItems();
+      const newAllocation = (100 / (currentItems.length + 1)).toString();
+
+      // Update existing allocations to make room for the new asset
+      for (const item of currentItems) {
+        const updatedAllocation = (Number(item.allocation) * (currentItems.length / (currentItems.length + 1))).toString();
+        await storage.updatePortfolioAllocation(item.id, updatedAllocation);
+      }
+
+      // Create portfolio item with calculated allocation
       const portfolioItemData = {
         assetId: asset.id,
-        allocation: allocation.toString(),
+        allocation: newAllocation,
         rank: 0, // Will be set automatically in storage layer
       };
       console.log('Creating portfolio item:', portfolioItemData);
