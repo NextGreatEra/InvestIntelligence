@@ -105,5 +105,23 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  app.get('/api/markets', async (req, res) => {
+    try {
+      const { refreshTopCoins } = await import('./lib/coinmarketcap');
+      const markets = await refreshTopCoins();
+      const formattedMarkets = markets.slice(0, 10).map(coin => ({
+        id: coin.id.toString(),
+        symbol: coin.symbol,
+        name: coin.name,
+        current_price: coin.quote.USD.price,
+        price_change_percentage_24h: coin.quote.USD.percent_change_24h
+      }));
+      res.json(formattedMarkets);
+    } catch (error) {
+      console.error('Error fetching markets:', error);
+      res.status(500).json({ message: 'Failed to fetch markets data' });
+    }
+  });
+
   return server;
 }
