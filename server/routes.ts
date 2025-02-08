@@ -75,10 +75,20 @@ export function registerRoutes(app: Express) {
     try {
       console.log('Received portfolio item request:', req.body);
 
-      let currentPrice = Number(req.body.currentPrice || req.body.current_price);
+      // Initialize price and change data from the request
+      let currentPrice = req.body.current_price || req.body.currentPrice;
       let priceChangePercentage24h = req.body.price_change_percentage_24h;
 
-      // Only fetch real-time crypto data if it's a crypto asset
+      // Ensure we have a valid number for currentPrice
+      if (typeof currentPrice !== 'number') {
+        currentPrice = parseFloat(currentPrice);
+      }
+
+      if (isNaN(currentPrice)) {
+        throw new Error('Invalid price value');
+      }
+
+      // For crypto assets, try to get real-time data
       if (req.body.type === 'crypto') {
         const { getPrice } = await import('./lib/coinmarketcap');
         try {
@@ -98,17 +108,19 @@ export function registerRoutes(app: Express) {
         name: req.body.name,
         type: req.body.type,
         currentPrice: currentPrice.toString(),
-        priceChangePercentage24h: priceChangePercentage24h ? priceChangePercentage24h.toString() : null,
+        priceChangePercentage24h: priceChangePercentage24h != null 
+          ? priceChangePercentage24h.toString() 
+          : null,
         lastUpdated: new Date()
       });
 
-      console.log('Validated asset data:', assetData);
+      console.log('Formatted asset data:', assetData);
 
-      // Create the asset first
+      // Create the asset
       const asset = await storage.createAsset(assetData);
       console.log('Asset created:', asset);
 
-      // Create the portfolio item with default rank
+      // Create the portfolio item
       const portfolioItem = await storage.createPortfolioItem({
         assetId: asset.id,
         rank: 0
