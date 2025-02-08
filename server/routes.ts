@@ -249,7 +249,30 @@ export function registerRoutes(app: Express) {
 
   app.get("/api/markets", async (req, res) => {
     try {
-      // Fetch crypto data from CoinMarketCap
+      // First get or create the market assets
+      const marketAssets = [
+        { symbol: 'BTC', name: 'Bitcoin' },
+        { symbol: 'ETH', name: 'Ethereum' },
+        { symbol: 'SPY', name: 'S&P 500 ETF' },
+        { symbol: 'QQQ', name: 'Nasdaq-100 ETF' }
+      ];
+
+      // Get or create assets and store their IDs
+      const assetMap = new Map();
+      for (const market of marketAssets) {
+        let asset = await storage.getAssetBySymbol(market.symbol);
+        if (!asset) {
+          asset = await storage.createAsset({
+            symbol: market.symbol,
+            name: market.name,
+            type: market.symbol === 'BTC' || market.symbol === 'ETH' ? 'crypto' : 'stock',
+            currentPrice: '0'
+          });
+        }
+        assetMap.set(market.symbol, asset);
+      }
+
+      // Fetch current prices
       const [btcPrice, ethPrice] = await Promise.all([
         getCryptoPrice('BTC'),
         getCryptoPrice('ETH')
@@ -263,18 +286,26 @@ export function registerRoutes(app: Express) {
 
       // Store current prices in history
       await Promise.all([
-        storage.addPriceHistory({ assetId: 'BTC', price: btcPrice }),
-        storage.addPriceHistory({ assetId: 'ETH', price: ethPrice }),
-        storage.addPriceHistory({ assetId: 'SPY', price: spyPrice }),
-        storage.addPriceHistory({ assetId: 'QQQ', price: qqqPrice })
+        storage.addPriceHistory({ assetId: assetMap.get('BTC').id, price: btcPrice }),
+        storage.addPriceHistory({ assetId: assetMap.get('ETH').id, price: ethPrice }),
+        storage.addPriceHistory({ assetId: assetMap.get('SPY').id, price: spyPrice }),
+        storage.addPriceHistory({ assetId: assetMap.get('QQQ').id, price: qqqPrice })
       ]);
 
-      // Get 24h ago prices
+      // Get 24h ago prices using asset IDs
       const [btcHistory, ethHistory, spyHistory, qqqHistory] = await Promise.all([
-        storage.getPriceHistory24h('BTC'),
-        storage.getPriceHistory24h('ETH'),
-        storage.getPriceHistory24h('SPY'),
-        storage.getPriceHistory24h('QQQ')
+        storage.getPriceHistory24h(assetMap.get('BTC').symbol),
+        storage.getPriceHistory24h(assetMap.get('ETH').symbol),
+        storage.getPriceHistory24h(assetMap.get('SPY').symbol),
+        storage.getPriceHistory24h(assetMap.get('QQQ').symbol)
+      ]);
+
+      // Update current prices in assets table
+      await Promise.all([
+        storage.updateAssetPrice(assetMap.get('BTC').id, btcPrice),
+        storage.updateAssetPrice(assetMap.get('ETH').id, ethPrice),
+        storage.updateAssetPrice(assetMap.get('SPY').id, spyPrice),
+        storage.updateAssetPrice(assetMap.get('QQQ').id, qqqPrice)
       ]);
 
       const markets = [

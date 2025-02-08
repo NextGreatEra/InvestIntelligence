@@ -189,35 +189,49 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addPriceHistory(data: { assetId: number; price: number }): Promise<void> {
-    await db.insert(priceHistory).values({
-      assetId: data.assetId,
-      price: data.price.toString(),
-      timestamp: new Date()
-    });
+    try {
+      await db.insert(priceHistory).values({
+        assetId: data.assetId,
+        price: data.price.toString(),
+        timestamp: new Date()
+      });
+    } catch (error) {
+      console.error('Error adding price history:', error);
+      throw error;
+    }
   }
 
   async getPriceHistory24h(assetSymbol: string): Promise<{ price: number } | null> {
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    try {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const [historicalPrice] = await db
-      .select({
-        price: priceHistory.price
-      })
-      .from(priceHistory)
-      .where(
-        and(
-          eq(priceHistory.assetId, Number(assetSymbol)),
-          lte(priceHistory.timestamp, twentyFourHoursAgo)
+      // First get the asset ID
+      const asset = await this.getAssetBySymbol(assetSymbol);
+      if (!asset) return null;
+
+      const [historicalPrice] = await db
+        .select({
+          price: priceHistory.price
+        })
+        .from(priceHistory)
+        .where(
+          and(
+            eq(priceHistory.assetId, asset.id),
+            lte(priceHistory.timestamp, twentyFourHoursAgo)
+          )
         )
-      )
-      .orderBy(desc(priceHistory.timestamp))
-      .limit(1);
+        .orderBy(desc(priceHistory.timestamp))
+        .limit(1);
 
-    if (!historicalPrice) return null;
+      if (!historicalPrice) return null;
 
-    return {
-      price: Number(historicalPrice.price)
-    };
+      return {
+        price: Number(historicalPrice.price)
+      };
+    } catch (error) {
+      console.error('Error getting price history:', error);
+      return null;
+    }
   }
 }
 
