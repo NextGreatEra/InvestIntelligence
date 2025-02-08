@@ -195,13 +195,17 @@ export async function getPrice(symbol: string): Promise<number> {
     }
 
     const price = usdData.price || 0;
+    const priceChange = usdData.percent_change_24h || null;
 
     // Update price and price change in database
     if (asset) {
-      await storage.updateAssetPrice(asset.id, price, usdData.percent_change_24h);
+      await storage.updateAssetPrice(asset.id, price, priceChange);
     }
 
-    return usdData;
+    return {
+      price,
+      percent_change_24h: priceChange
+    };
   } catch (error) {
     console.error('CoinMarketCap price error:', error);
     throw new Error('Failed to fetch price');

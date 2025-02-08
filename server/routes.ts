@@ -77,8 +77,8 @@ export function registerRoutes(app: Express) {
 
       // Parse and validate the asset data
       // Get latest price and price change data for crypto assets
-      let priceChangePercentage24h = null;
-      if (req.body.type === 'crypto') {
+      let priceChangePercentage24h = req.body.price_change_percentage_24h || null;
+      if (req.body.type === 'crypto' && !priceChangePercentage24h) {
         const { getPrice } = await import('./lib/coinmarketcap');
         try {
           const quote = await getPrice(req.body.symbol);
