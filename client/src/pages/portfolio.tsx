@@ -28,13 +28,14 @@ export default function Portfolio() {
       currentPrice: number;
       type: 'stock' | 'crypto';
     }) => {
+      console.log('Sending data to server:', data); // Debug log
       const res = await fetch("/api/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           symbol: data.symbol,
           name: data.name,
-          currentPrice: Number(data.currentPrice), // Ensure price is a number
+          currentPrice: data.currentPrice,
           type: data.type
         }),
       });
@@ -57,6 +58,7 @@ export default function Portfolio() {
       });
     },
     onError: (error: Error) => {
+      console.error('Error adding asset:', error); // Debug log
       toast({
         title: "Error",
         description: error.message || "Failed to add asset to portfolio",
@@ -66,6 +68,7 @@ export default function Portfolio() {
   });
 
   const handleAssetSelect = useCallback((asset: Asset) => {
+    console.log('Selected asset:', asset); // Debug log
     setSelectedAsset(asset);
   }, []);
 
@@ -83,6 +86,7 @@ export default function Portfolio() {
       return;
     }
 
+    console.log('Adding asset:', selectedAsset); // Debug log
     addAssetMutation.mutate({
       symbol: selectedAsset.symbol,
       name: selectedAsset.name,

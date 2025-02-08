@@ -48,6 +48,7 @@ export function registerRoutes(app: Express) {
       // If type is not specified or is 'stock', search for stocks
       if (!type || type === 'stock') {
         const stockResults = await searchStocks(q);
+        console.log('Stock search results:', stockResults); // Debug log
         results.push(...stockResults);
       }
 
@@ -55,11 +56,13 @@ export function registerRoutes(app: Express) {
       if (!type || type === 'crypto') {
         const { searchAssets } = await import('./lib/coinmarketcap');
         const cryptoResults = await searchAssets(q);
+        console.log('Crypto search results:', cryptoResults); // Debug log
         if (cryptoResults) {
           results.push(...cryptoResults);
         }
       }
 
+      console.log('Final search results:', results); // Debug log
       res.json(results);
     } catch (error) {
       console.error('Search error:', error);
@@ -70,19 +73,20 @@ export function registerRoutes(app: Express) {
   // Add portfolio item endpoint
   app.post('/api/portfolio', async (req, res) => {
     try {
+      console.log('Received portfolio item request:', req.body); // Debug log
+
       // Parse and validate the asset data
       const assetData = insertAssetSchema.parse({
         symbol: req.body.symbol,
         name: req.body.name,
-        currentPrice: req.body.currentPrice ? req.body.currentPrice.toString() : "0", // Handle undefined price
-        type: req.body.type
+        type: req.body.type,
+        currentPrice: req.body.currentPrice.toString()
       });
 
-      console.log('Creating asset with data:', assetData); // Debug log
+      console.log('Validated asset data:', assetData); // Debug log
 
       // Create the asset first
       const asset = await storage.createAsset(assetData);
-
       console.log('Asset created:', asset); // Debug log
 
       // Create the portfolio item with default rank
@@ -92,7 +96,6 @@ export function registerRoutes(app: Express) {
       });
 
       console.log('Portfolio item created:', portfolioItem); // Debug log
-
       res.json(portfolioItem);
     } catch (error) {
       console.error('Error adding portfolio item:', error);
