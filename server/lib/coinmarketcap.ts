@@ -46,7 +46,7 @@ async function refreshCache() {
   }
 }
 
-async function refreshTopCoins() {
+export async function refreshTopCoins() {
   const apiKey = process.env.COINMARKETCAP_API_KEY;
   if (!apiKey) {
     console.error('Missing COINMARKETCAP_API_KEY');
