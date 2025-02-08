@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import AssetSearch from "./asset-search";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 interface AssetSearchResult {
   id: string;
@@ -15,7 +16,6 @@ interface AssetSearchResult {
 export default function AddAssetButton() {
   const [open, setOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<AssetSearchResult | null>(null);
-  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const addAssetMutation = useMutation({
@@ -40,11 +40,11 @@ export default function AddAssetButton() {
 
       return response.json();
     },
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
       toast({
-        title: "Asset added",
-        description: `${variables.symbol.toUpperCase()} has been added to your portfolio`,
+        title: "Success",
+        description: "Asset added successfully",
       });
       setOpen(false);
       setSelectedAsset(null);
@@ -52,7 +52,7 @@ export default function AddAssetButton() {
     onError: (error: Error) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to add asset to portfolio",
+        description: error.message,
         variant: "destructive",
       });
     },
