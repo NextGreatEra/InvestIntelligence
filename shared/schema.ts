@@ -14,7 +14,6 @@ export const assets = pgTable("assets", {
 export const portfolioItems = pgTable("portfolio_items", {
   id: serial("id").primaryKey(),
   assetId: integer("asset_id").notNull(),
-  allocation: decimal("allocation").notNull(),
   rank: integer("rank").notNull(),
   lastUpdated: timestamp("last_updated").notNull().defaultNow()
 });
@@ -49,7 +48,6 @@ export type PriceHistory = typeof priceHistory.$inferSelect;
 export type InsertPriceHistory = z.infer<typeof insertPriceHistorySchema>;
 
 export interface AssetWithDetails extends Asset {
-  allocation: number;
   rank: number;
   value: number;
   priceChange24h: number;

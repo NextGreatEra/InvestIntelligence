@@ -5,11 +5,9 @@ import { Asset } from "@shared/schema";
 import { ArrowUpIcon, ArrowDownIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Slider } from "@/components/ui/slider";
 import { queryClient } from "@/lib/queryClient";
 
 interface AssetWithDetails extends Asset {
-  allocation: number;
   rank: number;
   value: number;
   priceChange24h: number;
@@ -49,58 +47,6 @@ export default function AssetList() {
     },
   });
 
-  const updateAllocationMutation = useMutation({
-    mutationFn: async ({id, allocation}: {id: number, allocation: number}) => {
-      const response = await fetch(`/api/portfolio/${id}/allocation`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ allocation: Number(allocation) }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to update allocation");
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleAllocationChange = async (assetId: number, newAllocation: number) => {
-    const asset = assets.find(a => a.id === assetId);
-    if (!asset) return;
-
-    const otherAssets = assets.filter(a => a.id !== assetId);
-    const otherTotal = otherAssets.reduce((sum, a) => sum + Number(a.allocation), 0);
-    const newTotal = otherTotal + newAllocation;
-
-    if (newTotal > 100) {
-      toast({
-        title: "Error",
-        description: "Total allocation cannot exceed 100%",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await updateAllocationMutation.mutateAsync({
-        id: assetId,
-        allocation: newAllocation
-      });
-    } catch (error) {
-      console.error('Error updating allocation:', error);
-    }
-  };
-
   const handleDelete = (assetId: number) => {
     if (window.confirm('Are you sure you want to remove this asset?')) {
       removeAssetMutation.mutate(assetId);
@@ -111,13 +57,12 @@ export default function AssetList() {
     return <AssetListSkeleton />;
   }
 
-  const sortedAssets = [...assets].sort((a, b) => Number(b.currentPrice) * b.allocation - Number(a.currentPrice) * a.allocation);
-  const totalAllocation = sortedAssets.reduce((sum, asset) => sum + Number(asset.allocation), 0);
+  const sortedAssets = [...assets].sort((a, b) => Number(b.currentPrice) - Number(a.currentPrice));
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Portfolio Assets ({totalAllocation.toFixed(2)}% Allocated)</CardTitle>
+        <CardTitle>Portfolio Assets</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -133,26 +78,6 @@ export default function AssetList() {
               <div className="flex-1">
                 <p className="font-medium">
                   ${Number(asset.currentPrice).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Slider
-                    value={[Number(asset.allocation)]}
-                    onValueChange={([value]) => handleAllocationChange(asset.id, value)}
-                    max={100}
-                    step={0.1}
-                    className="w-32"
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {Number(asset.allocation).toFixed(2)}%
-                  </span>
-                </div>
-              </div>
-              <div className="flex-1 text-right">
-                <p className="font-medium">
-                  ${(Number(asset.currentPrice) * Number(asset.allocation) / 100).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}

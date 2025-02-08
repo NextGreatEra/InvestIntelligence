@@ -99,7 +99,6 @@ export function registerRoutes(app: Express) {
 
           return {
             ...asset,
-            allocation: Number(item.allocation),
             rank: item.rank,
             value: Number(asset.currentPrice),
             priceChange24h
@@ -191,20 +190,9 @@ export function registerRoutes(app: Express) {
         asset = await storage.createAsset(assetData);
       }
 
-      // Get current portfolio items to calculate allocation
-      const currentItems = await storage.getPortfolioItems();
-      const newAllocation = (100 / (currentItems.length + 1)).toString();
-
-      // Update existing allocations to make room for the new asset
-      for (const item of currentItems) {
-        const updatedAllocation = (Number(item.allocation) * (currentItems.length / (currentItems.length + 1))).toString();
-        await storage.updatePortfolioAllocation(item.id, updatedAllocation);
-      }
-
-      // Create portfolio item with calculated allocation
+      // Create portfolio item
       const portfolioItemData = {
         assetId: asset.id,
-        allocation: newAllocation,
         rank: 0, // Will be set automatically in storage layer
       };
       console.log('Creating portfolio item:', portfolioItemData);
