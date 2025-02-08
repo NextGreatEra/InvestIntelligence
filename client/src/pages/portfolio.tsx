@@ -17,7 +17,6 @@ interface Asset {
 
 export default function Portfolio() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [allocation, setAllocation] = useState("");
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const { toast } = useToast();
 
@@ -32,7 +31,7 @@ export default function Portfolio() {
       const res = await fetch("/api/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data), // Send data as is, schema will handle conversion
+        body: JSON.stringify(data),
       });
 
       if (!res.ok) {
@@ -46,7 +45,6 @@ export default function Portfolio() {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
       setIsDialogOpen(false);
       setSelectedAsset(null);
-      setAllocation("");
       toast({
         title: "Success",
         description: "Asset added to portfolio successfully.",
@@ -67,10 +65,6 @@ export default function Portfolio() {
     setSelectedAsset(asset);
   }, []);
 
-  const handleAllocationChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setAllocation(e.target.value);
-  }, []);
-
   const handleAddAsset = useCallback(() => {
     if (!selectedAsset) {
       toast({
@@ -86,7 +80,7 @@ export default function Portfolio() {
       symbol: selectedAsset.symbol,
       name: selectedAsset.name,
       type: selectedAsset.type,
-      currentPrice: selectedAsset.current_price // Match the schema property name
+      currentPrice: selectedAsset.current_price
     });
   }, [selectedAsset, toast, addAssetMutation]);
 
