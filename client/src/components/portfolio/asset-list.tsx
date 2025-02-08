@@ -176,12 +176,20 @@ export default function AssetList() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <p className="font-medium">
-                    ${Number(item.asset.currentPrice).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </p>
+                  <div className="text-right">
+                    <p className="font-medium">
+                      ${Number(item.asset.currentPrice).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                    {item.asset.price_change_percentage_24h && (
+                      <p className={`text-sm ${item.asset.price_change_percentage_24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {item.asset.price_change_percentage_24h >= 0 ? '+' : ''}
+                        {item.asset.price_change_percentage_24h.toFixed(2)}%
+                      </p>
+                    )}
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
