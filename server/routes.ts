@@ -20,9 +20,10 @@ export function registerRoutes(app: Express) {
       const { searchAssets } = await import('./lib/coinmarketcap');
       const results = await searchAssets(q);
       res.setHeader('Content-Type', 'application/json');
-      res.json(results);
+      res.json(results || []);
     } catch (error) {
       console.error('Search error:', error);
+      res.setHeader('Content-Type', 'application/json');
       res.status(500).json({ message: 'Failed to search assets' });
     }
   });
