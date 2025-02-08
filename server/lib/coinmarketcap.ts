@@ -30,6 +30,7 @@ async function refreshTopCoins() {
   await enforceRateLimit();
 
   try {
+    console.log('Fetching top coins from CoinMarketCap...');
     const response = await fetch(
       `${CMC_API}/cryptocurrency/listings/latest?limit=250`,
       {
@@ -52,6 +53,7 @@ async function refreshTopCoins() {
       throw new Error('Invalid response format from CoinMarketCap');
     }
 
+    console.log(`Successfully fetched ${data.data.length} coins`);
     topCoinsCache = data.data;
     lastCacheUpdate = Date.now();
 
@@ -68,22 +70,33 @@ async function refreshTopCoins() {
     return topCoinsCache;
   } catch (error) {
     console.error('Failed to refresh top coins:', error);
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch coins: ${error.message}`);
+    }
     throw error;
   }
 }
 
 export async function searchAssets(query: string) {
+  if (!query) {
+    console.log('Empty search query, returning empty results');
+    return [];
+  }
+
   try {
     console.log('Searching assets with query:', query);
 
-    // Refresh cache if needed
-    if (Date.now() - lastCacheUpdate > CACHE_DURATION || topCoinsCache.length === 0) {
-      console.log('Refreshing cache...');
+    // Check if cache needs refresh
+    const now = Date.now();
+    if (now - lastCacheUpdate > CACHE_DURATION || topCoinsCache.length === 0) {
+      console.log('Cache expired or empty, refreshing...');
       await refreshTopCoins();
     }
 
     // Search in cached data
     const searchQuery = query.toLowerCase();
+    console.log('Searching in cache of', topCoinsCache.length, 'coins');
+
     const results = topCoinsCache
       .filter(coin => 
         coin.name.toLowerCase().includes(searchQuery) || 
@@ -101,7 +114,8 @@ export async function searchAssets(query: string) {
     return results;
   } catch (error) {
     console.error('Asset search error:', error);
-    throw new Error('Failed to connect to search service');
+    // Return empty results instead of throwing to prevent UI disruption
+    return [];
   }
 }
 
