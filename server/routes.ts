@@ -21,6 +21,20 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  app.delete('/api/portfolio/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid portfolio item ID' });
+      }
+      await storage.removePortfolioItem(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error removing portfolio item:', error);
+      res.status(500).json({ message: 'Failed to remove portfolio item' });
+    }
+  });
+
   app.get('/api/assets/search', async (req, res) => {
     const { q } = req.query;
     if (typeof q !== 'string') {
