@@ -88,7 +88,7 @@ export function registerRoutes(app: Express) {
         throw new Error('Invalid price value');
       }
 
-      // For crypto assets, try to get real-time data
+      // Only fetch real-time data for crypto assets
       if (req.body.type === 'crypto') {
         const { getPrice } = await import('./lib/coinmarketcap');
         try {
@@ -100,6 +100,12 @@ export function registerRoutes(app: Express) {
         } catch (error) {
           console.error('Error fetching crypto price data:', error);
         }
+      }
+
+      // For stocks, keep the original price and price change
+      if (req.body.type === 'stock') {
+        currentPrice = req.body.current_price || req.body.currentPrice;
+        priceChangePercentage24h = req.body.price_change_percentage_24h;
       }
 
       // Validate and format the data
