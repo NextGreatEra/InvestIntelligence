@@ -107,16 +107,37 @@ export function registerRoutes(app: Express) {
 
   app.get('/api/markets', async (req, res) => {
     try {
-      const { refreshTopCoins } = await import('./lib/coinmarketcap');
-      const markets = await refreshTopCoins();
-      const formattedMarkets = markets.slice(0, 10).map(coin => ({
-        id: coin.id.toString(),
-        symbol: coin.symbol,
-        name: coin.name,
-        current_price: coin.quote.USD.price,
-        price_change_percentage_24h: coin.quote.USD.percent_change_24h
-      }));
-      res.json(formattedMarkets);
+      const [{ refreshTopCoins }, { getStockPrice }] = await Promise.all([
+        import('./lib/coinmarketcap'),
+        import('./lib/finnhub')
+      ]);
+
+      const coins = await refreshTopCoins();
+      const cryptoMarkets = coins
+        .filter(coin => ['BTC', 'ETH'].includes(coin.symbol))
+        .map(coin => ({
+          id: coin.id.toString(),
+          symbol: coin.symbol,
+          name: coin.name,
+          current_price: coin.quote.USD.price,
+          price_change_percentage_24h: coin.quote.USD.percent_change_24h
+        }));
+
+      const stockSymbols = ['SPY', 'QQQ'];
+      const stockPrices = await Promise.all(
+        stockSymbols.map(async symbol => {
+          const price = await getStockPrice(symbol);
+          return {
+            id: symbol,
+            symbol,
+            name: symbol === 'SPY' ? 'S&P 500 ETF' : 'Nasdaq 100 ETF',
+            current_price: price,
+            price_change_percentage_24h: 0 // Note: We would need additional API calls to get 24h change
+          };
+        })
+      );
+
+      res.json([...cryptoMarkets, ...stockPrices]);
     } catch (error) {
       console.error('Error fetching markets:', error);
       res.status(500).json({ message: 'Failed to fetch markets data' });
