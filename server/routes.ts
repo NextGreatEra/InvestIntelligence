@@ -75,37 +75,40 @@ export function registerRoutes(app: Express) {
     try {
       console.log('Received portfolio item request:', req.body);
 
-      // Initialize price and change data from the request
-      let currentPrice = req.body.current_price || req.body.currentPrice;
-      let priceChangePercentage24h = req.body.price_change_percentage_24h;
+      let currentPrice;
+      let priceChangePercentage24h;
 
-      // Ensure we have a valid number for currentPrice
-      if (typeof currentPrice !== 'number') {
-        currentPrice = parseFloat(currentPrice);
-      }
-
-      if (isNaN(currentPrice)) {
-        throw new Error('Invalid price value');
-      }
-
-      // Only fetch real-time data for crypto assets
+      // Fetch fresh price data based on asset type
       if (req.body.type === 'crypto') {
         const { getPrice } = await import('./lib/coinmarketcap');
         try {
           const quote = await getPrice(req.body.symbol);
-          if (quote) {
-            currentPrice = quote.price;
-            priceChangePercentage24h = quote.percent_change_24h;
+          if (!quote || !quote.price) {
+            throw new Error('Failed to fetch crypto price');
           }
+          currentPrice = quote.price;
+          priceChangePercentage24h = quote.percent_change_24h;
         } catch (error) {
-          console.error('Error fetching crypto price data:', error);
+          console.error('Error fetching crypto price:', error);
+          throw new Error('Failed to fetch crypto price data');
+        }
+      } else if (req.body.type === 'stock') {
+        const { getStockPrice } = await import('./lib/finnhub');
+        try {
+          const { price, priceChange } = await getStockPrice(req.body.symbol);
+          if (!price) {
+            throw new Error('Failed to fetch stock price');
+          }
+          currentPrice = price;
+          priceChangePercentage24h = priceChange;
+        } catch (error) {
+          console.error('Error fetching stock price:', error);
+          throw new Error('Failed to fetch stock price data');
         }
       }
 
-      // For stocks, keep the original price and price change
-      if (req.body.type === 'stock') {
-        currentPrice = req.body.current_price || req.body.currentPrice;
-        priceChangePercentage24h = req.body.price_change_percentage_24h;
+      if (!currentPrice || isNaN(currentPrice)) {
+        throw new Error('Invalid price value');
       }
 
       // Validate and format the data
