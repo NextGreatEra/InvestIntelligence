@@ -28,11 +28,11 @@ export default function AddAssetButton() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          id: asset.id,
           symbol: asset.symbol.toUpperCase(),
           name: asset.name,
           currentPrice: asset.current_price,
-          priceChangePercentage24h: asset.price_change_percentage_24h,
-          type: 'crypto'
+          priceChangePercentage24h: asset.price_change_percentage_24h
         }),
       });
 

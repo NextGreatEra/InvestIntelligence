@@ -78,12 +78,15 @@ export function registerRoutes(app: Express) {
       let currentPrice;
       let priceChangePercentage24h;
 
+      // Determine type based on presence of id field (crypto) or not (stock)
+      const assetType = req.body.id ? 'crypto' : 'stock';
+
       // Fetch fresh price data based on asset type
-      if (req.body.type === 'crypto') {
+      if (assetType === 'crypto') {
         const { getPrice } = await import('./lib/coinmarketcap');
         try {
           const quote = await getPrice(req.body.symbol);
-          if (!quote || !quote.price) {
+          if (!quote || typeof quote.price === 'undefined') {
             throw new Error('Failed to fetch crypto price');
           }
           currentPrice = quote.price;
@@ -92,7 +95,7 @@ export function registerRoutes(app: Express) {
           console.error('Error fetching crypto price:', error);
           throw new Error('Failed to fetch crypto price data');
         }
-      } else if (req.body.type === 'stock') {
+      } else if (assetType === 'stock') {
         const { getStockPrice } = await import('./lib/finnhub');
         try {
           const { price, priceChange } = await getStockPrice(req.body.symbol);

@@ -203,8 +203,8 @@ export async function getPrice(symbol: string): Promise<number> {
     }
 
     return {
-      price,
-      percent_change_24h: priceChange
+      price: Number(price),
+      percent_change_24h: priceChange ? Number(priceChange) : null
     };
   } catch (error) {
     console.error('CoinMarketCap price error:', error);
