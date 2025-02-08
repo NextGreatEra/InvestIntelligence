@@ -12,6 +12,7 @@ interface Asset {
   symbol: string;
   name: string;
   current_price: number;
+  type: 'stock' | 'crypto';
 }
 
 export default function Portfolio() {
@@ -25,12 +26,17 @@ export default function Portfolio() {
       symbol: string;
       name: string;
       currentPrice: number;
-      allocation: number;
+      type: 'stock' | 'crypto';
     }) => {
       const res = await fetch("/api/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          symbol: data.symbol,
+          name: data.name,
+          currentPrice: Number(data.currentPrice), // Ensure price is a number
+          type: data.type
+        }),
       });
 
       if (!res.ok) {
@@ -68,20 +74,10 @@ export default function Portfolio() {
   }, []);
 
   const handleAddAsset = useCallback(() => {
-    if (!selectedAsset || !allocation) {
+    if (!selectedAsset) {
       toast({
         title: "Error",
-        description: "Please select an asset and enter allocation",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const numericAllocation = parseFloat(allocation);
-    if (isNaN(numericAllocation) || numericAllocation <= 0) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid allocation greater than 0",
+        description: "Please select an asset first",
         variant: "destructive",
       });
       return;
@@ -91,9 +87,9 @@ export default function Portfolio() {
       symbol: selectedAsset.symbol,
       name: selectedAsset.name,
       currentPrice: selectedAsset.current_price,
-      allocation: numericAllocation
+      type: selectedAsset.type
     });
-  }, [selectedAsset, allocation, toast, addAssetMutation]);
+  }, [selectedAsset, toast, addAssetMutation]);
 
   return (
     <div className="space-y-6">

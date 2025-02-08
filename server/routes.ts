@@ -70,21 +70,28 @@ export function registerRoutes(app: Express) {
   // Add portfolio item endpoint
   app.post('/api/portfolio', async (req, res) => {
     try {
+      // Parse and validate the asset data
       const assetData = insertAssetSchema.parse({
         symbol: req.body.symbol,
         name: req.body.name,
-        currentPrice: req.body.currentPrice.toString(), // Ensure price is converted to string
+        currentPrice: req.body.currentPrice ? req.body.currentPrice.toString() : "0", // Handle undefined price
         type: req.body.type
       });
 
+      console.log('Creating asset with data:', assetData); // Debug log
+
       // Create the asset first
       const asset = await storage.createAsset(assetData);
+
+      console.log('Asset created:', asset); // Debug log
 
       // Create the portfolio item with default rank
       const portfolioItem = await storage.createPortfolioItem({
         assetId: asset.id,
         rank: 0
       });
+
+      console.log('Portfolio item created:', portfolioItem); // Debug log
 
       res.json(portfolioItem);
     } catch (error) {
