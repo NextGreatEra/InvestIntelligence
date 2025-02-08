@@ -47,7 +47,12 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
           return true;
         }
 
-        // For other stocks, use case-insensitive matching
+        // Only include stocks from major US exchanges (no extension in symbol)
+        if (symbol.includes('.')) {
+          return false;
+        }
+
+        // Use case-insensitive matching for both symbol and company name
         const matchesSymbol = symbol.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesName = description.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -56,8 +61,7 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
           console.log(`Potential match: ${symbol} (${description})`);
         }
 
-        // Include result if it matches the search query in either symbol or name
-        return !symbol.includes('.') && (matchesSymbol || matchesName);
+        return matchesSymbol || matchesName;
       })
       .slice(0, 5);
 
