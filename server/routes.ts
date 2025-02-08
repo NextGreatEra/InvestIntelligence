@@ -313,34 +313,33 @@ export function registerRoutes(app: Express) {
           id: 'bitcoin',
           symbol: 'BTC',
           name: 'Bitcoin',
-          current_price: btcPrice,
-          price_change_24h: btcHistory ? (btcPrice - btcHistory.price) : 0,
-          price_change_percentage_24h: btcHistory ? ((btcPrice - btcHistory.price) / btcHistory.price * 100) : 0
+          current_price: Number(btcPrice.price || btcPrice),
+          price_change_24h: btcHistory ? (Number(btcPrice.price || btcPrice) - btcHistory.price) : 0,
+          price_change_percentage_24h: btcHistory ? ((Number(btcPrice.price || btcPrice) - btcHistory.price) / btcHistory.price * 100) : 0
         },
         {
           id: 'ethereum',
           symbol: 'ETH',
           name: 'Ethereum',
-          current_price: ethPrice,
-          price_change_24h: ethHistory ? (ethPrice - ethHistory.price) : 0,
-          price_change_percentage_24h: ethHistory ? ((ethPrice - ethHistory.price) / ethHistory.price * 100) : 0
+          current_price: Number(ethPrice.price || ethPrice),
+          price_change_24h: ethHistory ? (Number(ethPrice.price || ethPrice) - ethHistory.price) : 0,
+          price_change_percentage_24h: ethHistory ? ((Number(ethPrice.price || ethPrice) - ethHistory.price) / ethHistory.price * 100) : 0
         },
         {
           id: 'sp500',
           symbol: 'SPY',
           name: 'S&P 500 ETF',
-          current_price: spyPrice,
-          price_change_24h: spyHistory ? (spyPrice - spyHistory.price) : 0,
-          price_change_percentage_24h: spyHistory ? ((spyPrice - spyHistory.price) / spyHistory.price * 100) : 0
+          current_price: Number(spyPrice.c || spyPrice),
+          price_change_24h: spyHistory ? (Number(spyPrice.c || spyPrice) - spyHistory.price) : 0,
+          price_change_percentage_24h: Number(spyPrice.dp || 0)
         },
         {
           id: 'nasdaq',
           symbol: 'QQQ',
           name: 'Nasdaq-100 ETF',
-          current_price: qqqPrice,
-          price_change_24h: qqqHistory ? (qqqPrice - qqqHistory.price) : 0,
-          price_change_percentage_24h: qqqHistory ? ((qqqPrice - qqqHistory.price) / qqqHistory.price * 100) : 0
-        }
+          current_price: Number(qqqPrice.c || qqqPrice),
+          price_change_24h: qqqHistory ? (Number(qqqPrice.c || qqqPrice) - qqqHistory.price) : 0,
+          price_change_percentage_24h: Number(qqqPrice.dp || 0)
       ];
 
       res.json(markets);
