@@ -144,5 +144,27 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Add new route for updating portfolio item allocation
+  app.patch('/api/portfolio/:id/allocation', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { allocation } = req.body;
+
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid portfolio item ID' });
+      }
+
+      if (typeof allocation !== 'number' || allocation < 0 || allocation > 100) {
+        return res.status(400).json({ message: 'Allocation must be a number between 0 and 100' });
+      }
+
+      await storage.updatePortfolioItemAllocation(id, allocation.toString());
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating allocation:', error);
+      res.status(500).json({ message: 'Failed to update allocation' });
+    }
+  });
+
   return server;
 }

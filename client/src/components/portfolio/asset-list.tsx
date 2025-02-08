@@ -2,10 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Asset } from "@shared/schema";
-import { ArrowUpIcon, ArrowDownIcon, Trash2Icon } from "lucide-react";
+import { Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import AllocationChart from "./allocation-chart";
 
 interface PortfolioItem {
   id: number;
@@ -49,17 +50,49 @@ export default function AssetList() {
     },
   });
 
+  const updateAllocationMutation = useMutation({
+    mutationFn: async ({ id, allocation }: { id: number; allocation: number }) => {
+      const response = await fetch(`/api/portfolio/${id}/allocation`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ allocation }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update allocation");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDelete = (portfolioItemId: number) => {
     if (window.confirm('Are you sure you want to remove this asset?')) {
       removeAssetMutation.mutate(portfolioItemId);
     }
   };
 
+  const handleAllocationChange = (id: number, newAllocation: number) => {
+    updateAllocationMutation.mutate({ id, allocation: newAllocation });
+  };
+
   if (isLoading) {
     return <AssetListSkeleton />;
   }
 
-  const sortedPortfolioItems = [...portfolioItems].sort((a, b) => Number(b.asset.currentPrice) - Number(a.asset.currentPrice));
+  const sortedPortfolioItems = [...portfolioItems].sort((a, b) => 
+    parseFloat(b.allocation || "0") - parseFloat(a.allocation || "0")
+  );
 
   return (
     <Card>
@@ -67,6 +100,14 @@ export default function AssetList() {
         <CardTitle>Portfolio Assets</CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="mb-6 w-full aspect-square max-w-md mx-auto">
+          <AllocationChart
+            width={400}
+            height={400}
+            data={sortedPortfolioItems}
+            onAllocationChange={handleAllocationChange}
+          />
+        </div>
         <div className="space-y-4">
           {sortedPortfolioItems.map((item) => (
             <div
@@ -84,7 +125,9 @@ export default function AssetList() {
                     maximumFractionDigits: 2,
                   })}
                 </p>
-                {/* Price change removed as it's not directly available in the new structure */}
+                <p className="text-sm text-muted-foreground">
+                  {parseFloat(item.allocation || "0").toFixed(1)}% Allocation
+                </p>
               </div>
               <div className="ml-4">
                 <Button
@@ -110,6 +153,9 @@ function AssetListSkeleton() {
         <CardTitle>Portfolio Assets</CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="mb-6 w-full aspect-square max-w-md mx-auto">
+          <Skeleton className="w-[400px] h-[400px] rounded-full" />
+        </div>
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div
