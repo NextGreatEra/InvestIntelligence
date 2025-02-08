@@ -195,7 +195,7 @@ export async function getPrice(symbol: string): Promise<number> {
     }
 
     const price = usdData.price || 0;
-    const priceChange = usdData.percent_change_24h || null;
+    const priceChange = usdData.percent_change_24h || 0;
 
     // Update price and price change in database
     if (asset) {
