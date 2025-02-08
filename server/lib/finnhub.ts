@@ -39,45 +39,35 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
         const symbol = result.symbol.toUpperCase();
         const description = result.description.toUpperCase();
         const searchQuery = query.toUpperCase();
-        const type = (result.type || '').toUpperCase();
 
-        // Check for special cases first (known major stocks)
+        // Check for exact matches to major stock symbols first
         const majorStocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META'];
         if (majorStocks.includes(symbol)) {
+          console.log(`Found major stock: ${symbol}`);
           return true;
         }
 
-        // More permissive type checking
-        const validTypes = ['STOCK', 'COMMON', 'EQS', 'ETF', 'ADR'];
-        const isValidType = validTypes.some(t => type.includes(t)) || type === '';
-
-        // More lenient search matching
+        // For other stocks, use more lenient matching
         const matchesSymbol = symbol.includes(searchQuery);
         const matchesName = description.includes(searchQuery);
 
-        const shouldInclude = 
-          isValidType && 
-          !symbol.includes('.') && 
-          (matchesSymbol || matchesName);
-
-        if (!shouldInclude) {
-          console.log(`Filtered out ${symbol}: type=${type}, matches=${matchesSymbol || matchesName}`);
+        // Log all potential matches for debugging
+        if (matchesSymbol || matchesName) {
+          console.log(`Potential match: ${symbol} (${description})`);
         }
 
-        return shouldInclude;
+        // Include result if it matches the search query in either symbol or name
+        return !symbol.includes('.') && (matchesSymbol || matchesName);
       })
       .slice(0, 5);
 
-    console.log(`Filtered to ${filteredResults.length} results`);
-
-    if (filteredResults.length === 0) {
-      return [];
-    }
+    console.log(`Filtered to ${filteredResults.length} results:`, filteredResults);
 
     // Fetch prices for filtered results
     const resultsWithPrices = await Promise.all(
       filteredResults.map(async (result: any) => {
         try {
+          console.log(`Fetching price for ${result.symbol}`);
           const quote = await fetch(
             `${FINNHUB_API}/quote?symbol=${encodeURIComponent(result.symbol)}&token=${process.env.FINNHUB_API_KEY}`
           );
@@ -87,6 +77,7 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
           }
 
           const priceData = await quote.json();
+          console.log(`Price data for ${result.symbol}:`, priceData);
 
           if (typeof priceData.c !== 'number' || isNaN(priceData.c)) {
             console.log(`Invalid price data for ${result.symbol}:`, priceData);
