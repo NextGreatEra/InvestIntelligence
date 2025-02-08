@@ -36,13 +36,13 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
           return false;
         }
 
-        const symbol = result.symbol.toUpperCase();
-        const description = result.description.toUpperCase();
-        const searchQuery = query.toUpperCase();
+        const symbol = result.symbol;
+        const description = result.description;
+        const searchQuery = query;
 
         // Check for exact matches to major stock symbols first
         const majorStocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META'];
-        if (majorStocks.includes(symbol)) {
+        if (majorStocks.includes(symbol.toUpperCase())) {
           console.log(`Found major stock: ${symbol}`);
           return true;
         }
