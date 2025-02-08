@@ -144,5 +144,27 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Add new endpoint for updating portfolio item rank
+  app.patch('/api/portfolio/:id/rank', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { rank } = req.body;
+
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid portfolio item ID' });
+      }
+
+      if (typeof rank !== 'number') {
+        return res.status(400).json({ message: 'Invalid rank value' });
+      }
+
+      await storage.updatePortfolioItemRank(id, rank);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating portfolio item rank:', error);
+      res.status(500).json({ message: 'Failed to update portfolio item rank' });
+    }
+  });
+
   return server;
 }
