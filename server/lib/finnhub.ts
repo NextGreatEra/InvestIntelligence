@@ -100,7 +100,11 @@ export async function getStockPrice(symbol: string): Promise<number> {
       throw new Error(`Invalid price data for ${symbol}`);
     }
 
-    return data.c;
+    return {
+      price: data.c,
+      price_change_24h: data.d || 0,
+      price_change_percentage_24h: data.dp || 0
+    };
   } catch (error) {
     console.error('Finnhub price error:', error);
     throw error;

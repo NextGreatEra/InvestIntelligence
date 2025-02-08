@@ -123,14 +123,19 @@ export async function getPrice(symbol: string): Promise<number> {
     }
 
     const data = await response.json();
-    const price = data.data[symbol]?.quote?.USD?.price || 0;
+    const usdData = data.data[symbol]?.quote?.USD;
+    const price = usdData?.price || 0;
 
     // Update price in database
     if (asset) {
       await storage.updateAssetPrice(asset.id, price);
     }
 
-    return price;
+    return {
+      price,
+      price_change_24h: usdData?.price_change_24h || 0,
+      price_change_percentage_24h: usdData?.percent_change_24h || 0
+    };
   } catch (error) {
     console.error('CoinMarketCap price error:', error);
     throw new Error('Failed to fetch price');

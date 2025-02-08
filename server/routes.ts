@@ -314,16 +314,16 @@ export function registerRoutes(app: Express) {
           symbol: 'BTC',
           name: 'Bitcoin',
           current_price: btcPrice,
-          price_change_24h: btcHistory ? (btcPrice - btcHistory.price) : 0,
-          price_change_percentage_24h: btcHistory ? ((btcPrice - btcHistory.price) / btcHistory.price * 100) : 0
+          price_change_24h: btcData?.price_change_24h || 0,
+          price_change_percentage_24h: btcData?.price_change_percentage_24h || 0
         },
         {
           id: 'ethereum',
           symbol: 'ETH',
           name: 'Ethereum',
           current_price: ethPrice,
-          price_change_24h: ethHistory ? (ethPrice - ethHistory.price) : 0,
-          price_change_percentage_24h: ethHistory ? ((ethPrice - ethHistory.price) / ethHistory.price * 100) : 0
+          price_change_24h: ethData?.price_change_24h || 0,
+          price_change_percentage_24h: ethData?.price_change_percentage_24h || 0
         },
         {
           id: 'sp500',
