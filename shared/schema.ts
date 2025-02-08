@@ -15,6 +15,7 @@ export const portfolioItems = pgTable("portfolio_items", {
   id: serial("id").primaryKey(),
   assetId: integer("asset_id").notNull(),
   rank: integer("rank").notNull(),
+  allocation: decimal("allocation", { precision: 10, scale: 2 }).notNull(),
   lastUpdated: timestamp("last_updated").notNull().defaultNow()
 });
 
