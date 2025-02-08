@@ -20,17 +20,23 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
 
     const filteredResults = (data.result || [])
       .filter((result: any) => {
+        // Get uppercase versions for case-insensitive comparison
         const type = result.type?.toUpperCase() || '';
         const symbol = result.symbol || '';
-        const description = result.description?.toUpperCase() || '';
+        const description = result.description || '';
         const searchQuery = query.toUpperCase();
 
-        return (type.includes('STOCK') || type === 'EQS') && 
-               result.symbol && 
-               result.description &&
-               !symbol.includes('.') && 
+        // Accept common stock types and ADRs
+        const validTypes = ['STOCK', 'EQS', 'ADR'];
+        const isValidType = validTypes.some(t => type.includes(t));
+
+        // Check if it's a valid stock and matches either symbol or company name
+        return isValidType && 
+               symbol && 
+               description &&
+               !symbol.includes('.') && // Exclude non-standard symbols
                (symbol.toUpperCase().includes(searchQuery) || 
-                description.includes(searchQuery))
+                description.toUpperCase().includes(searchQuery));
       })
       .slice(0, 5);
 
@@ -60,7 +66,7 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
             symbol: result.symbol,
             name: result.description,
             type: 'stock',
-            current_price: priceData.c // Match the crypto API response format
+            current_price: priceData.c
           };
         } catch (error) {
           console.error(`Failed to fetch price for ${result.symbol}:`, error);
