@@ -21,67 +21,87 @@ async function enforceRateLimit() {
 }
 
 async function refreshTopCoins() {
-  if (!process.env.COINMARKETCAP_API_KEY) {
+  const apiKey = process.env.COINMARKETCAP_API_KEY;
+  if (!apiKey) {
+    console.error('Missing COINMARKETCAP_API_KEY');
     throw new Error('Missing COINMARKETCAP_API_KEY');
   }
 
   await enforceRateLimit();
-  const headers = {
-    'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY,
-    'Accept': 'application/json'
-  } as const;
 
-  const response = await fetch(
-    `${CMC_API}/cryptocurrency/listings/latest?limit=250`,
-    { headers }
-  );
+  try {
+    const response = await fetch(
+      `${CMC_API}/cryptocurrency/listings/latest?limit=250`,
+      {
+        headers: {
+          'X-CMC_PRO_API_KEY': apiKey,
+          'Accept': 'application/json'
+        }
+      }
+    );
 
-  if (!response.ok) {
-    throw new Error(`CoinMarketCap API error: ${response.status}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`CoinMarketCap API error: ${response.status}`, errorText);
+      throw new Error(`CoinMarketCap API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!data.data || !Array.isArray(data.data)) {
+      console.error('Invalid response format from CoinMarketCap:', data);
+      throw new Error('Invalid response format from CoinMarketCap');
+    }
+
+    topCoinsCache = data.data;
+    lastCacheUpdate = Date.now();
+
+    // Store all coins in database
+    await Promise.all(topCoinsCache.map(coin => 
+      storage.createAsset({
+        symbol: coin.symbol,
+        name: coin.name,
+        type: 'crypto',
+        currentPrice: coin.quote.USD.price.toString()
+      }).catch(error => console.error(`Failed to store coin ${coin.symbol}:`, error))
+    ));
+
+    return topCoinsCache;
+  } catch (error) {
+    console.error('Failed to refresh top coins:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  topCoinsCache = data.data || [];
-  lastCacheUpdate = Date.now();
-
-  // Store all coins in database
-  await Promise.all(topCoinsCache.map(coin => 
-    storage.createAsset({
-      symbol: coin.symbol,
-      name: coin.name,
-      type: 'crypto',
-      currentPrice: coin.quote.USD.price.toString()
-    }).catch(console.error)
-  ));
-
-  return topCoinsCache;
 }
 
 export async function searchAssets(query: string) {
   try {
+    console.log('Searching assets with query:', query);
+
     // Refresh cache if needed
     if (Date.now() - lastCacheUpdate > CACHE_DURATION || topCoinsCache.length === 0) {
+      console.log('Refreshing cache...');
       await refreshTopCoins();
     }
 
     // Search in cached data
     const searchQuery = query.toLowerCase();
-    const results = topCoinsCache.filter(coin => 
-      coin.name.toLowerCase().includes(searchQuery) || 
-      coin.symbol.toLowerCase().includes(searchQuery)
-    ).slice(0, 5);
+    const results = topCoinsCache
+      .filter(coin => 
+        coin.name.toLowerCase().includes(searchQuery) || 
+        coin.symbol.toLowerCase().includes(searchQuery)
+      )
+      .slice(0, 5)
+      .map(coin => ({
+        id: coin.id.toString(),
+        symbol: coin.symbol,
+        name: coin.name,
+        current_price: coin.quote.USD.price
+      }));
 
-    if (results.length === 0) return [];
-
-    return results.map(coin => ({
-      id: coin.id.toString(),
-      symbol: coin.symbol,
-      name: coin.name,
-      current_price: coin.quote.USD.price
-    }));
+    console.log(`Found ${results.length} results for query "${query}"`);
+    return results;
   } catch (error) {
-    console.error('CoinMarketCap search error:', error);
-    return [];
+    console.error('Asset search error:', error);
+    throw new Error('Failed to connect to search service');
   }
 }
 
@@ -92,6 +112,12 @@ interface PriceData {
 }
 
 export async function getPrice(symbol: string): Promise<number> {
+  const apiKey = process.env.COINMARKETCAP_API_KEY;
+  if (!apiKey) {
+    console.error('Missing COINMARKETCAP_API_KEY');
+    throw new Error('Missing COINMARKETCAP_API_KEY');
+  }
+
   try {
     // First check our database
     const asset = await storage.getAssetBySymbol(symbol);
@@ -114,23 +140,27 @@ export async function getPrice(symbol: string): Promise<number> {
 
     // Fallback to direct API call
     await enforceRateLimit();
-    const headers = {
-      'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY,
-      'Accept': 'application/json'
-    } as const;
 
     const response = await fetch(
       `${CMC_API}/cryptocurrency/quotes/latest?symbol=${symbol}`,
-      { headers }
+      {
+        headers: {
+          'X-CMC_PRO_API_KEY': apiKey,
+          'Accept': 'application/json'
+        }
+      }
     );
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`CoinMarketCap API error: ${response.status}`, errorText);
       throw new Error(`CoinMarketCap API error: ${response.status}`);
     }
 
     const data = await response.json();
     const usdData = data.data[symbol]?.quote?.USD;
     if (!usdData) {
+      console.error(`No USD data found for ${symbol}:`, data);
       throw new Error(`No USD data found for ${symbol}`);
     }
 
