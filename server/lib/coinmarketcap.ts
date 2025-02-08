@@ -1,9 +1,9 @@
 import { storage } from "../storage";
+import fetch from 'node-fetch';
 
 const CMC_API = "https://pro-api.coinmarketcap.com/v1";
 
-// Cache for top coins
-let topCoinsCache: any[] = [];
+let cachedCoins: any[] = [];
 let lastCacheUpdate = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
@@ -18,6 +18,32 @@ async function enforceRateLimit() {
     await new Promise(resolve => setTimeout(resolve, REQUEST_INTERVAL - timeSinceLastRequest));
   }
   lastRequestTime = Date.now();
+}
+
+async function refreshCache() {
+  console.log('Fetching top coins from CoinMarketCap...');
+  try {
+    const response = await fetch(
+      'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=250',
+      {
+        headers: {
+          'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY || '',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`CoinMarketCap API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    cachedCoins = data.data;
+    lastCacheUpdate = Date.now();
+    console.log(`Successfully fetched ${cachedCoins.length} coins`);
+  } catch (error) {
+    console.error('Error fetching from CoinMarketCap:', error);
+    throw new Error('Failed to fetch cryptocurrency data');
+  }
 }
 
 async function refreshTopCoins() {
@@ -54,11 +80,11 @@ async function refreshTopCoins() {
     }
 
     console.log(`Successfully fetched ${data.data.length} coins`);
-    topCoinsCache = data.data;
+    cachedCoins = data.data; //Use cachedCoins instead of topCoinsCache
     lastCacheUpdate = Date.now();
 
     // Store all coins in database
-    await Promise.all(topCoinsCache.map(coin => 
+    await Promise.all(cachedCoins.map(coin =>
       storage.createAsset({
         symbol: coin.symbol,
         name: coin.name,
@@ -67,7 +93,7 @@ async function refreshTopCoins() {
       }).catch(error => console.error(`Failed to store coin ${coin.symbol}:`, error))
     ));
 
-    return topCoinsCache;
+    return cachedCoins;
   } catch (error) {
     console.error('Failed to refresh top coins:', error);
     if (error instanceof Error) {
@@ -77,30 +103,21 @@ async function refreshTopCoins() {
   }
 }
 
+
 export async function searchAssets(query: string) {
-  if (!query) {
-    console.log('Empty search query, returning empty results');
-    return [];
-  }
+  console.log(`Searching assets with query: ${query}`);
 
   try {
-    console.log('Searching assets with query:', query);
-
-    // Check if cache needs refresh
-    const now = Date.now();
-    if (now - lastCacheUpdate > CACHE_DURATION || topCoinsCache.length === 0) {
+    if (Date.now() - lastCacheUpdate > CACHE_DURATION || cachedCoins.length === 0) {
       console.log('Cache expired or empty, refreshing...');
-      await refreshTopCoins();
+      await refreshCache();
     }
 
-    // Search in cached data
-    const searchQuery = query.toLowerCase();
-    console.log('Searching in cache of', topCoinsCache.length, 'coins');
-
-    const results = topCoinsCache
-      .filter(coin => 
-        coin.name.toLowerCase().includes(searchQuery) || 
-        coin.symbol.toLowerCase().includes(searchQuery)
+    console.log(`Searching in cache of ${cachedCoins.length} coins`);
+    const results = cachedCoins
+      .filter(coin =>
+        coin.name.toLowerCase().includes(query.toLowerCase()) ||
+        coin.symbol.toLowerCase().includes(query.toLowerCase())
       )
       .slice(0, 5)
       .map(coin => ({
@@ -113,9 +130,8 @@ export async function searchAssets(query: string) {
     console.log(`Found ${results.length} results for query "${query}"`);
     return results;
   } catch (error) {
-    console.error('Asset search error:', error);
-    // Return empty results instead of throwing to prevent UI disruption
-    return [];
+    console.error('Search error:', error);
+    throw new Error('Failed to search assets');
   }
 }
 
@@ -146,7 +162,7 @@ export async function getPrice(symbol: string): Promise<number> {
 
     // Check cache first
     if (Date.now() - lastCacheUpdate <= CACHE_DURATION) {
-      const coin = topCoinsCache.find(c => c.symbol === symbol);
+      const coin = cachedCoins.find(c => c.symbol === symbol);
       if (coin) {
         return coin.quote.USD.price;
       }
