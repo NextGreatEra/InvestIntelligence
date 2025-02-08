@@ -30,7 +30,8 @@ export default function AddAssetButton() {
           symbol: asset.symbol.toUpperCase(),
           name: asset.name,
           currentPrice: asset.current_price,
-          priceChangePercentage24h: asset.price_change_percentage_24h,
+          price_change_percentage_24h: asset.price_change_percentage_24h,
+          priceChangePercentage24h: asset.price_change_percentage_24h, // Add both versions
           type: 'crypto'
         }),
       });
