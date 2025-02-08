@@ -6,6 +6,7 @@ import { PlusCircleIcon, MinusCircleIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import AddAssetButton from "@/components/portfolio/add-asset-button";
 import {
   Tooltip,
   TooltipContent,
@@ -107,8 +108,9 @@ export default function AssetList() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Portfolio Assets</CardTitle>
+        <AddAssetButton />
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -200,8 +202,9 @@ export default function AssetList() {
 function AssetListSkeleton() {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Portfolio Assets</CardTitle>
+        <div className="w-24 h-9" /> {/* Space for AddAssetButton */}
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

@@ -2,10 +2,9 @@ import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import AddAssetButton from "@/components/portfolio/add-asset-button";
 import AssetSearch from "@/components/portfolio/asset-search";
 import AssetList from "@/components/portfolio/asset-list";
+import AddAssetButton from "@/components/portfolio/add-asset-button"; // Added import
 
 interface Asset {
   id: string;
@@ -86,12 +85,7 @@ export default function Portfolio() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Portfolio</h1>
-        <AddAssetButton />
-      </div>
-
-      <AssetList />
+      <AssetList addAssetButton={<AddAssetButton />} /> {/* Added AddAssetButton prop */}
     </div>
   );
 }
