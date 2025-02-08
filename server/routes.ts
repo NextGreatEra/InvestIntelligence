@@ -10,5 +10,21 @@ export function registerRoutes(app: Express) {
     res.json({ status: 'ok' });
   });
 
+  app.get('/api/assets/search', async (req, res) => {
+    const { q } = req.query;
+    if (typeof q !== 'string') {
+      return res.status(400).json({ message: 'Search query is required' });
+    }
+    
+    try {
+      const { searchAssets } = await import('./lib/coinmarketcap');
+      const results = await searchAssets(q);
+      res.json(results);
+    } catch (error) {
+      console.error('Search error:', error);
+      res.status(500).json({ message: 'Failed to search assets' });
+    }
+  });
+
   return server;
 }
