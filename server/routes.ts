@@ -158,7 +158,7 @@ export function registerRoutes(app: Express) {
         return res.status(400).json({ message: 'Invalid rank value' });
       }
 
-      await storage.updatePortfolioItemRank(id, rank);
+      await storage.updatePortfolioRank(id, rank);
       res.json({ success: true });
     } catch (error) {
       console.error('Error updating portfolio item rank:', error);
