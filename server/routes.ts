@@ -1,10 +1,11 @@
-
 import { Express } from "express";
 import http from "http";
+import { storage } from "./storage";
+import { insertAssetSchema, insertPortfolioItemSchema } from "@shared/schema";
 
 export function registerRoutes(app: Express) {
   const server = http.createServer(app);
-  
+
   // API routes will go here
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
@@ -15,7 +16,7 @@ export function registerRoutes(app: Express) {
     if (typeof q !== 'string') {
       return res.status(400).json({ message: 'Search query is required' });
     }
-    
+
     try {
       const { searchAssets } = await import('./lib/coinmarketcap');
       const results = await searchAssets(q);
@@ -25,6 +26,34 @@ export function registerRoutes(app: Express) {
       console.error('Search error:', error);
       res.setHeader('Content-Type', 'application/json');
       res.status(500).json({ message: 'Failed to search assets' });
+    }
+  });
+
+  // Add portfolio item endpoint
+  app.post('/api/portfolio', async (req, res) => {
+    try {
+      // Parse and validate the asset data
+      const assetData = insertAssetSchema.parse({
+        symbol: req.body.symbol,
+        name: req.body.name,
+        currentPrice: req.body.currentPrice,
+        type: req.body.type
+      });
+
+      // Create the asset first
+      const asset = await storage.createAsset(assetData);
+
+      // Create the portfolio item
+      const portfolioItem = await storage.createPortfolioItem({
+        assetId: asset.id
+      });
+
+      res.json(portfolioItem);
+    } catch (error) {
+      console.error('Error adding portfolio item:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to add asset to portfolio' 
+      });
     }
   });
 
