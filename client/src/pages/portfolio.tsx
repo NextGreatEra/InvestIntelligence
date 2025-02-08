@@ -4,7 +4,6 @@ import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import AssetSearch from "@/components/portfolio/asset-search";
 import AssetList from "@/components/portfolio/asset-list";
-import AddAssetButton from "@/components/portfolio/add-asset-button"; // Added import
 
 interface Asset {
   id: string;
@@ -84,8 +83,13 @@ export default function Portfolio() {
   }, [selectedAsset, toast, addAssetMutation]);
 
   return (
-    <div className="space-y-6">
-      <AssetList addAssetButton={<AddAssetButton />} /> {/* Added AddAssetButton prop */}
+    <div className="grid grid-cols-2 gap-6">
+      <div>
+        <AssetList />
+      </div>
+      <div>
+        <AssetSearch onSelect={handleAssetSelect} />
+      </div>
     </div>
   );
 }

@@ -1,10 +1,10 @@
 import { useState, useCallback, memo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-import { Loader2 } from "lucide-react";
+import { Loader2, PlusIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Asset } from "@shared/schema";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface AssetSearchResult {
   id: string;
@@ -15,11 +15,9 @@ interface AssetSearchResult {
 
 interface AssetSearchProps {
   onSelect: (asset: AssetSearchResult) => void;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
 }
 
-const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
+const AssetSearch = ({ onSelect }: AssetSearchProps) => {
   const [search, setSearch] = useState("");
   const { toast } = useToast();
 
@@ -62,69 +60,71 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
       return;
     }
     onSelect(asset);
-    onOpenChange(false);
-    setSearch(""); // Reset search when an asset is selected
-  }, [onSelect, toast, onOpenChange]);
-
-  const handleSearchChange = useCallback((value: string) => {
-    setSearch(value);
-  }, []);
+  }, [onSelect, toast]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Add Asset to Portfolio</DialogTitle>
-          <DialogDescription>
-            Search for a cryptocurrency by name or symbol to add it to your portfolio.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="mt-4">
-          <Command shouldFilter={false} className="rounded-lg border shadow-md">
-            <CommandInput
-              placeholder="Search assets... (e.g. Bitcoin)"
-              value={search}
-              onValueChange={handleSearchChange}
-              className="border-none focus:ring-0"
-            />
-            <CommandList>
-              <CommandEmpty>
-                {search.length < 2 ? (
-                  "Type at least 2 characters to search"
-                ) : isLoading ? (
-                  <div className="flex items-center justify-center py-2">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Searching...
-                  </div>
-                ) : (
-                  "No results found"
-                )}
-              </CommandEmpty>
-              {results.length > 0 && (
-                <CommandGroup heading="Assets">
-                  {results.map((asset) => (
-                    <CommandItem
-                      key={`${asset.symbol}-${asset.id}`}
-                      onSelect={() => handleSelect(asset)}
-                      className="flex justify-between items-center"
-                    >
-                      <div>
-                        <span className="font-medium">{asset.symbol.toUpperCase()}</span>
-                        <span className="ml-2 text-muted-foreground">{asset.name}</span>
-                      </div>
-                      <span className="text-sm">
-                        ${typeof asset.current_price === 'number' ? asset.current_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'N/A'}
-                      </span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+    <Card>
+      <CardHeader>
+        <CardTitle>Watchlist</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Command shouldFilter={false} className="rounded-lg border shadow-md">
+          <CommandInput
+            placeholder="Search assets... (e.g. Bitcoin, AAPL)"
+            value={search}
+            onValueChange={setSearch}
+            className="border-none focus:ring-0"
+          />
+          <CommandList>
+            <CommandEmpty>
+              {search.length < 2 ? (
+                "Type at least 2 characters to search"
+              ) : isLoading ? (
+                <div className="flex items-center justify-center py-2">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Searching...
+                </div>
+              ) : (
+                "No results found"
               )}
-            </CommandList>
-          </Command>
-        </div>
-      </DialogContent>
-    </Dialog>
+            </CommandEmpty>
+            {results.length > 0 && (
+              <CommandGroup heading="Search Results">
+                {results.map((asset) => (
+                  <CommandItem
+                    key={`${asset.symbol}-${asset.id}`}
+                    className="flex justify-between items-center p-4 hover:bg-accent"
+                  >
+                    <div>
+                      <div className="font-medium">{asset.symbol.toUpperCase()}</div>
+                      <div className="text-sm text-muted-foreground">{asset.name}</div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <span className="text-sm font-medium">
+                        ${typeof asset.current_price === 'number' 
+                          ? asset.current_price.toLocaleString('en-US', { 
+                              minimumFractionDigits: 2, 
+                              maximumFractionDigits: 2 
+                            }) 
+                          : 'N/A'}
+                      </span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleSelect(asset)}
+                        className="ml-2"
+                      >
+                        <PlusIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </CardContent>
+    </Card>
   );
 };
 
