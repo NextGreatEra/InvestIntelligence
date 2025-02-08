@@ -2,6 +2,7 @@ import { Express } from "express";
 import http from "http";
 import { storage } from "./storage";
 import { insertAssetSchema, insertPortfolioItemSchema } from "@shared/schema";
+import { searchStocks } from "./lib/finnhub";
 
 export function registerRoutes(app: Express) {
   const server = http.createServer(app);
@@ -36,19 +37,32 @@ export function registerRoutes(app: Express) {
   });
 
   app.get('/api/assets/search', async (req, res) => {
-    const { q } = req.query;
+    const { q, type } = req.query;
     if (typeof q !== 'string') {
       return res.status(400).json({ message: 'Search query is required' });
     }
 
     try {
-      const { searchAssets } = await import('./lib/coinmarketcap');
-      const results = await searchAssets(q);
-      res.setHeader('Content-Type', 'application/json');
-      res.json(results || []);
+      let results = [];
+
+      // If type is not specified or is 'stock', search for stocks
+      if (!type || type === 'stock') {
+        const stockResults = await searchStocks(q);
+        results.push(...stockResults);
+      }
+
+      // If type is not specified or is 'crypto', search for cryptocurrencies
+      if (!type || type === 'crypto') {
+        const { searchAssets } = await import('./lib/coinmarketcap');
+        const cryptoResults = await searchAssets(q);
+        if (cryptoResults) {
+          results.push(...cryptoResults);
+        }
+      }
+
+      res.json(results);
     } catch (error) {
       console.error('Search error:', error);
-      res.setHeader('Content-Type', 'application/json');
       res.status(500).json({ message: 'Failed to search assets' });
     }
   });

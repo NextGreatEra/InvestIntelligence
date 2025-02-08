@@ -1,4 +1,3 @@
-
 import { Asset, InsertAsset } from '../../shared/schema';
 
 const FINNHUB_API = "https://finnhub.io/api/v1";
@@ -18,14 +17,14 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
     }
 
     const data = await response.json();
-    
+
     const filteredResults = (data.result || [])
       .filter((result: any) => {
         const type = result.type?.toUpperCase() || '';
         const symbol = result.symbol || '';
         const description = result.description?.toUpperCase() || '';
         const searchQuery = query.toUpperCase();
-        
+
         return (type.includes('STOCK') || type === 'EQS') && 
                result.symbol && 
                result.description &&
@@ -45,25 +44,23 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
           const quote = await fetch(
             `${FINNHUB_API}/quote?symbol=${encodeURIComponent(result.symbol)}&token=${process.env.FINNHUB_API_KEY}`
           );
-          
+
           if (!quote.ok) {
             throw new Error(`Quote API error: ${quote.status}`);
           }
-          
+
           const priceData = await quote.json();
-          
-          // The 'c' field is the current price
+
           if (typeof priceData.c !== 'number' || isNaN(priceData.c)) {
             console.error(`Invalid price data for ${result.symbol}:`, priceData);
             return null;
           }
 
           return {
-            id: result.symbol,
             symbol: result.symbol,
             name: result.description,
             type: 'stock',
-            current_price: priceData.c
+            currentPrice: priceData.c
           };
         } catch (error) {
           console.error(`Failed to fetch price for ${result.symbol}:`, error);
@@ -72,7 +69,7 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
       })
     );
 
-    return resultsWithPrices.filter(result => result !== null);
+    return resultsWithPrices.filter((result): result is Partial<InsertAsset> => result !== null);
   } catch (error) {
     console.error('Finnhub search error:', error);
     return [];
@@ -94,17 +91,12 @@ export async function getStockPrice(symbol: string): Promise<number> {
     }
 
     const data = await response.json();
-    
-    // The 'c' field is the current price
+
     if (typeof data.c !== 'number' || isNaN(data.c)) {
       throw new Error(`Invalid price data for ${symbol}`);
     }
 
-    return {
-      price: data.c,
-      price_change_24h: data.d || 0,
-      price_change_percentage_24h: data.dp || 0
-    };
+    return data.c;
   } catch (error) {
     console.error('Finnhub price error:', error);
     throw error;
