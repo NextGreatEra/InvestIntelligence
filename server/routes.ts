@@ -81,7 +81,7 @@ export function registerRoutes(app: Express) {
         name: req.body.name,
         type: req.body.type,
         currentPrice: req.body.currentPrice || req.body.current_price,
-        priceChangePercentage24h: req.body.priceChangePercentage24h || req.body.price_change_percentage_24h,
+        priceChangePercentage24h: req.body.priceChangePercentage24h || req.body.price_change_percentage_24h || null,
         lastUpdated: new Date()
       });
 
