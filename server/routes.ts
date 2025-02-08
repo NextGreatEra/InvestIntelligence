@@ -286,10 +286,10 @@ export function registerRoutes(app: Express) {
 
       // Store current prices in history
       await Promise.all([
-        storage.addPriceHistory({ assetId: assetMap.get('BTC').id, price: btcPrice }),
-        storage.addPriceHistory({ assetId: assetMap.get('ETH').id, price: ethPrice }),
-        storage.addPriceHistory({ assetId: assetMap.get('SPY').id, price: spyPrice }),
-        storage.addPriceHistory({ assetId: assetMap.get('QQQ').id, price: qqqPrice })
+        storage.addPriceHistory({ assetId: assetMap.get('BTC').id, price: Number(btcPrice.price || btcPrice) }),
+        storage.addPriceHistory({ assetId: assetMap.get('ETH').id, price: Number(ethPrice.price || ethPrice) }),
+        storage.addPriceHistory({ assetId: assetMap.get('SPY').id, price: Number(spyPrice.price || spyPrice) }),
+        storage.addPriceHistory({ assetId: assetMap.get('QQQ').id, price: Number(qqqPrice.price || qqqPrice) })
       ]);
 
       // Get 24h ago prices using asset IDs
@@ -302,10 +302,10 @@ export function registerRoutes(app: Express) {
 
       // Update current prices in assets table
       await Promise.all([
-        storage.updateAssetPrice(assetMap.get('BTC').id, btcPrice),
-        storage.updateAssetPrice(assetMap.get('ETH').id, ethPrice),
-        storage.updateAssetPrice(assetMap.get('SPY').id, spyPrice),
-        storage.updateAssetPrice(assetMap.get('QQQ').id, qqqPrice)
+        storage.updateAssetPrice(assetMap.get('BTC').id, Number(btcPrice.price || btcPrice)),
+        storage.updateAssetPrice(assetMap.get('ETH').id, Number(ethPrice.price || ethPrice)),
+        storage.updateAssetPrice(assetMap.get('SPY').id, Number(spyPrice.price || spyPrice)),
+        storage.updateAssetPrice(assetMap.get('QQQ').id, Number(qqqPrice.price || qqqPrice))
       ]);
 
       const markets = [
