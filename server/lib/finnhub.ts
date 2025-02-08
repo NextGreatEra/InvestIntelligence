@@ -35,7 +35,8 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
         const searchQuery = query.toLowerCase().trim();
 
         // Only include stocks from major US exchanges (no extension in symbol)
-        if (symbol.includes('.')) return false;
+        // Allow both stocks and ETFs (but exclude other extensions)
+        if (symbol.includes('.') && !symbol.endsWith('.ETF')) return false;
 
         // Check for company name matches first
         if (description.includes(searchQuery)) {
