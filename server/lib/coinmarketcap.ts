@@ -1,6 +1,6 @@
+import { storage } from "../storage";
 
 const CMC_API = "https://pro-api.coinmarketcap.com/v1";
-import { storage } from "../storage";
 
 // Cache for top coins
 let topCoinsCache: any[] = [];
@@ -26,14 +26,14 @@ async function refreshTopCoins() {
   }
 
   await enforceRateLimit();
+  const headers = {
+    'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY,
+    'Accept': 'application/json'
+  } as const;
+
   const response = await fetch(
     `${CMC_API}/cryptocurrency/listings/latest?limit=250`,
-    {
-      headers: {
-        'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY,
-        'Accept': 'application/json'
-      }
-    }
+    { headers }
   );
 
   if (!response.ok) {
@@ -85,6 +85,12 @@ export async function searchAssets(query: string) {
   }
 }
 
+interface PriceData {
+  price: number;
+  price_change_24h: number;
+  price_change_percentage_24h: number;
+}
+
 export async function getPrice(symbol: string): Promise<number> {
   try {
     // First check our database
@@ -108,14 +114,14 @@ export async function getPrice(symbol: string): Promise<number> {
 
     // Fallback to direct API call
     await enforceRateLimit();
+    const headers = {
+      'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY,
+      'Accept': 'application/json'
+    } as const;
+
     const response = await fetch(
       `${CMC_API}/cryptocurrency/quotes/latest?symbol=${symbol}`,
-      {
-        headers: {
-          'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY,
-          'Accept': 'application/json'
-        }
-      }
+      { headers }
     );
 
     if (!response.ok) {
@@ -124,18 +130,18 @@ export async function getPrice(symbol: string): Promise<number> {
 
     const data = await response.json();
     const usdData = data.data[symbol]?.quote?.USD;
-    const price = usdData?.price || 0;
+    if (!usdData) {
+      throw new Error(`No USD data found for ${symbol}`);
+    }
+
+    const price = usdData.price || 0;
 
     // Update price in database
     if (asset) {
       await storage.updateAssetPrice(asset.id, price);
     }
 
-    return {
-      price,
-      price_change_24h: usdData?.price_change_24h || 0,
-      price_change_percentage_24h: usdData?.percent_change_24h || 0
-    };
+    return price;
   } catch (error) {
     console.error('CoinMarketCap price error:', error);
     throw new Error('Failed to fetch price');
