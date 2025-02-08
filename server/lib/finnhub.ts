@@ -56,11 +56,14 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
             return null;
           }
 
+          // Format the price as a string with 8 decimal places
+          const formattedPrice = priceData.c.toFixed(8);
+
           return {
             symbol: result.symbol,
             name: result.description,
             type: 'stock',
-            currentPrice: priceData.c
+            currentPrice: formattedPrice // Return price as a formatted string
           };
         } catch (error) {
           console.error(`Failed to fetch price for ${result.symbol}:`, error);

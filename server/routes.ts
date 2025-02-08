@@ -73,7 +73,7 @@ export function registerRoutes(app: Express) {
       const assetData = insertAssetSchema.parse({
         symbol: req.body.symbol,
         name: req.body.name,
-        currentPrice: req.body.current_price || req.body.currentPrice,
+        currentPrice: req.body.currentPrice.toString(), // Ensure price is converted to string
         type: req.body.type
       });
 
