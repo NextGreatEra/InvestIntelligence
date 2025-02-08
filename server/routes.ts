@@ -122,21 +122,25 @@ export function registerRoutes(app: Express) {
         return res.status(400).json({ message: "Invalid portfolio item ID" });
       }
 
-      console.log('Processing delete request for portfolio item:', { id: numericId });
+      // Get all portfolio items first
+      const portfolioItems = await storage.getPortfolioItems();
+      const portfolioItem = portfolioItems.find(item => item.id === numericId);
 
-      // Get the portfolio item to verify it exists
-      const items = await storage.getPortfolioItems();
-      const itemExists = items.some(item => item.id === numericId);
-
-      if (!itemExists) {
-        console.log('Portfolio item not found:', { id: numericId, availableIds: items.map(i => i.id) });
-        return res.status(404).json({ message: "Portfolio item not found" });
+      if (!portfolioItem) {
+        return res.status(404).json({ 
+          message: "Portfolio item not found",
+          details: { requestedId: numericId }
+        });
       }
 
+      // If we found the item, delete it
       await storage.removePortfolioItem(numericId);
-      console.log('Portfolio item deleted successfully:', { id: numericId });
 
-      res.json({ message: "Asset removed from portfolio" });
+      // Send success response
+      res.json({ 
+        message: "Asset removed from portfolio",
+        removedId: numericId 
+      });
     } catch (error) {
       console.error("Portfolio item deletion error:", error);
       res.status(500).json({ 
