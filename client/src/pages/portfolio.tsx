@@ -86,7 +86,7 @@ export default function Portfolio() {
       symbol: selectedAsset.symbol,
       name: selectedAsset.name,
       type: selectedAsset.type,
-      currentPrice: selectedAsset.current_price // Use current_price from the search results
+      currentPrice: selectedAsset.current_price // Match the schema property name
     });
   }, [selectedAsset, toast, addAssetMutation]);
 
