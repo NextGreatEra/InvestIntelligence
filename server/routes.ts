@@ -48,7 +48,7 @@ export function registerRoutes(app: Express) {
       // If type is not specified or is 'stock', search for stocks
       if (!type || type === 'stock') {
         const stockResults = await searchStocks(q);
-        console.log('Stock search results:', stockResults); // Debug log
+        console.log('Stock search results:', stockResults);
         results.push(...stockResults);
       }
 
@@ -56,13 +56,13 @@ export function registerRoutes(app: Express) {
       if (!type || type === 'crypto') {
         const { searchAssets } = await import('./lib/coinmarketcap');
         const cryptoResults = await searchAssets(q);
-        console.log('Crypto search results:', cryptoResults); // Debug log
+        console.log('Crypto search results:', cryptoResults);
         if (cryptoResults) {
           results.push(...cryptoResults);
         }
       }
 
-      console.log('Final search results:', results); // Debug log
+      console.log('Final search results:', results);
       res.json(results);
     } catch (error) {
       console.error('Search error:', error);
@@ -75,11 +75,10 @@ export function registerRoutes(app: Express) {
     try {
       console.log('Received portfolio item request:', req.body);
 
-      // Get latest price and price change data
-      let currentPrice = req.body.currentPrice || req.body.current_price;
-      let priceChangePercentage24h = req.body.price_change_percentage_24h || null;
+      let currentPrice = Number(req.body.currentPrice || req.body.current_price);
+      let priceChangePercentage24h = req.body.price_change_percentage_24h;
 
-      // For crypto assets, try to get real-time data
+      // Only fetch real-time crypto data if it's a crypto asset
       if (req.body.type === 'crypto') {
         const { getPrice } = await import('./lib/coinmarketcap');
         try {
@@ -87,22 +86,19 @@ export function registerRoutes(app: Express) {
           if (quote) {
             currentPrice = quote.price;
             priceChangePercentage24h = quote.percent_change_24h;
-            console.log('Updated price data from CoinMarketCap:', {
-              price: currentPrice,
-              priceChange: priceChangePercentage24h
-            });
           }
         } catch (error) {
-          console.error('Error fetching price data:', error);
+          console.error('Error fetching crypto price data:', error);
         }
       }
 
+      // Validate and format the data
       const assetData = insertAssetSchema.parse({
-        symbol: req.body.symbol,
+        symbol: req.body.symbol.toUpperCase(),
         name: req.body.name,
         type: req.body.type,
-        currentPrice: String(currentPrice),
-        priceChangePercentage24h: priceChangePercentage24h ? String(priceChangePercentage24h) : null,
+        currentPrice: currentPrice.toString(),
+        priceChangePercentage24h: priceChangePercentage24h ? priceChangePercentage24h.toString() : null,
         lastUpdated: new Date()
       });
 
@@ -167,7 +163,6 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  // Add new endpoint for updating portfolio item rank
   app.patch('/api/portfolio/:id/rank', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
