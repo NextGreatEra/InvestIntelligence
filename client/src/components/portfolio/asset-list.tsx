@@ -127,6 +127,10 @@ export default function AssetList() {
             const allocation = totalItems === 1 ? 100 :
               Math.round((totalItems - index) * (100 / totalItems));
 
+            const priceChange = item.asset.priceChangePercentage24h 
+              ? Number(item.asset.priceChangePercentage24h)
+              : null;
+
             return (
               <div
                 key={item.id}
@@ -192,10 +196,10 @@ export default function AssetList() {
                         maximumFractionDigits: 2,
                       })}
                     </p>
-                    {item.asset.priceChangePercentage24h != null && (
-                      <p className={`text-sm ${Number(item.asset.priceChangePercentage24h) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {Number(item.asset.priceChangePercentage24h) >= 0 ? '+' : ''}
-                        {Number(item.asset.priceChangePercentage24h).toFixed(2)}%
+                    {priceChange !== null && (
+                      <p className={`text-sm ${priceChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {priceChange >= 0 ? '+' : ''}
+                        {priceChange.toFixed(2)}%
                       </p>
                     )}
                   </div>

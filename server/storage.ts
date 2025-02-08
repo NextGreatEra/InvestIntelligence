@@ -55,6 +55,9 @@ export class DatabaseStorage implements IStorage {
       .values({ 
         ...insertAsset,
         currentPrice: formattedPrice,
+        priceChangePercentage24h: insertAsset.priceChangePercentage24h 
+          ? Number(insertAsset.priceChangePercentage24h).toFixed(2)
+          : null,
         lastUpdated: new Date() 
       })
       .returning();
@@ -67,7 +70,9 @@ export class DatabaseStorage implements IStorage {
       .update(assets)
       .set({
         currentPrice: formattedPrice,
-        priceChangePercentage24h: priceChangePercentage24h?.toString() || null,
+        priceChangePercentage24h: priceChangePercentage24h 
+          ? priceChangePercentage24h.toFixed(2)
+          : null,
         lastUpdated: new Date()
       })
       .where(eq(assets.id, id))

@@ -75,15 +75,22 @@ export function registerRoutes(app: Express) {
     try {
       console.log('Received portfolio item request:', req.body);
 
-      // Parse and validate the asset data
-      // Get latest price and price change data for crypto assets
+      // Get latest price and price change data
+      let currentPrice = req.body.currentPrice || req.body.current_price;
       let priceChangePercentage24h = req.body.price_change_percentage_24h || null;
-      if (req.body.type === 'crypto' && !priceChangePercentage24h) {
+
+      // For crypto assets, try to get real-time data
+      if (req.body.type === 'crypto') {
         const { getPrice } = await import('./lib/coinmarketcap');
         try {
           const quote = await getPrice(req.body.symbol);
-          if (quote && quote.percent_change_24h) {
+          if (quote) {
+            currentPrice = quote.price;
             priceChangePercentage24h = quote.percent_change_24h;
+            console.log('Updated price data from CoinMarketCap:', {
+              price: currentPrice,
+              priceChange: priceChangePercentage24h
+            });
           }
         } catch (error) {
           console.error('Error fetching price data:', error);
@@ -94,8 +101,8 @@ export function registerRoutes(app: Express) {
         symbol: req.body.symbol,
         name: req.body.name,
         type: req.body.type,
-        currentPrice: req.body.currentPrice || req.body.current_price,
-        priceChangePercentage24h: priceChangePercentage24h,
+        currentPrice: String(currentPrice),
+        priceChangePercentage24h: priceChangePercentage24h ? String(priceChangePercentage24h) : null,
         lastUpdated: new Date()
       });
 
