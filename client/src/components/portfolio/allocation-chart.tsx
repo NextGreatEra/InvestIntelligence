@@ -74,7 +74,7 @@ export default function AllocationChart({ width, height, data, onAllocationChang
   });
 
   // Don't render if dimensions are invalid
-  if (width < 10 || height < 10) return null;
+  if (width < 10 || height < 10 || !data.length) return null;
 
   return (
     <svg width={width} height={height}>
@@ -82,7 +82,7 @@ export default function AllocationChart({ width, height, data, onAllocationChang
         <Pie
           data={pieData}
           pieValue={d => d.value}
-          outerRadius={radius - 20} // Add some padding
+          outerRadius={radius - 20}
           innerRadius={radius * 0.6}
           cornerRadius={3}
           padAngle={0.02}
