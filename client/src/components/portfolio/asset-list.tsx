@@ -103,7 +103,9 @@ export default function AssetList() {
     return <AssetListSkeleton />;
   }
 
-  const sortedPortfolioItems = [...portfolioItems].sort((a, b) => a.rank - b.rank);
+  // Filter out invalid portfolio items
+  const validPortfolioItems = portfolioItems.filter(item => item && item.asset);
+  const sortedPortfolioItems = [...validPortfolioItems].sort((a, b) => a.rank - b.rank);
   const totalItems = sortedPortfolioItems.length;
 
   return (
@@ -115,7 +117,7 @@ export default function AssetList() {
       <CardContent>
         <div className="space-y-4">
           {sortedPortfolioItems.map((item, index) => {
-            const allocation = totalItems === 1 ? 100 : 
+            const allocation = totalItems === 1 ? 100 :
               Math.round((totalItems - index) * (100 / totalItems));
 
             return (
@@ -167,7 +169,7 @@ export default function AssetList() {
                   )}
                   <div>
                     <h3 className="font-medium">
-                      {item.asset.symbol.toUpperCase()} 
+                      {item.asset.symbol.toUpperCase()}
                       <span className="ml-2 text-sm text-muted-foreground">
                         ({allocation}%)
                       </span>
@@ -183,10 +185,10 @@ export default function AssetList() {
                         maximumFractionDigits: 2,
                       })}
                     </p>
-                    {item.asset.price_change_percentage_24h && (
-                      <p className={`text-sm ${item.asset.price_change_percentage_24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {item.asset.price_change_percentage_24h >= 0 ? '+' : ''}
-                        {item.asset.price_change_percentage_24h.toFixed(2)}%
+                    {item.asset.priceChangePercentage24h != null && (
+                      <p className={`text-sm ${Number(item.asset.priceChangePercentage24h) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {Number(item.asset.priceChangePercentage24h) >= 0 ? '+' : ''}
+                        {Number(item.asset.priceChangePercentage24h).toFixed(2)}%
                       </p>
                     )}
                   </div>

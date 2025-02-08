@@ -80,8 +80,9 @@ export function registerRoutes(app: Express) {
         symbol: req.body.symbol,
         name: req.body.name,
         type: req.body.type,
-        currentPrice: req.body.currentPrice || req.body.current_price, // Handle both property names
-        price_change_percentage_24h: req.body.price_change_percentage_24h
+        currentPrice: req.body.currentPrice || req.body.current_price,
+        priceChangePercentage24h: req.body.priceChangePercentage24h || req.body.price_change_percentage_24h,
+        lastUpdated: new Date()
       });
 
       console.log('Validated asset data:', assetData);

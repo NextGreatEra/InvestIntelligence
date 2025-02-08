@@ -1,4 +1,3 @@
-
 import { pgTable, text, serial, integer, decimal, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -33,6 +32,9 @@ export const insertAssetSchema = createInsertSchema(assets)
     type: z.enum(["stock", "crypto"]),
     currentPrice: z.union([z.string(), z.number()]).transform(val => 
       typeof val === 'string' ? val : val.toString()
+    ),
+    priceChangePercentage24h: z.union([z.string(), z.number(), z.null()]).optional().transform(val =>
+      val === null ? null : typeof val === 'string' ? val : val.toString()
     )
   })
   .omit({ 
