@@ -76,12 +76,26 @@ export function registerRoutes(app: Express) {
       console.log('Received portfolio item request:', req.body);
 
       // Parse and validate the asset data
+      // Get latest price and price change data for crypto assets
+      let priceChangePercentage24h = null;
+      if (req.body.type === 'crypto') {
+        const { getPrice } = await import('./lib/coinmarketcap');
+        try {
+          const quote = await getPrice(req.body.symbol);
+          if (quote && quote.percent_change_24h) {
+            priceChangePercentage24h = quote.percent_change_24h;
+          }
+        } catch (error) {
+          console.error('Error fetching price data:', error);
+        }
+      }
+
       const assetData = insertAssetSchema.parse({
         symbol: req.body.symbol,
         name: req.body.name,
         type: req.body.type,
         currentPrice: req.body.currentPrice || req.body.current_price,
-        priceChangePercentage24h: req.body.priceChangePercentage24h || req.body.price_change_percentage_24h || null,
+        priceChangePercentage24h: priceChangePercentage24h,
         lastUpdated: new Date()
       });
 

@@ -201,7 +201,7 @@ export async function getPrice(symbol: string): Promise<number> {
       await storage.updateAssetPrice(asset.id, price, usdData.percent_change_24h);
     }
 
-    return price;
+    return usdData;
   } catch (error) {
     console.error('CoinMarketCap price error:', error);
     throw new Error('Failed to fetch price');
