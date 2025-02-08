@@ -37,7 +37,13 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
         // Only include stocks from major US exchanges (no extension in symbol)
         if (symbol.includes('.')) return false;
 
-        // Check for exact symbol match first
+        // Check for company name matches first
+        if (description.includes(searchQuery)) {
+          console.log(`Company name match: ${result.symbol} (${result.description})`);
+          return true;
+        }
+
+        // Check for exact symbol match
         if (symbol === searchQuery) {
           console.log(`Exact symbol match: ${result.symbol}`);
           return true;
@@ -46,12 +52,6 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
         // Check if symbol starts with search query
         if (symbol.startsWith(searchQuery)) {
           console.log(`Symbol prefix match: ${result.symbol}`);
-          return true;
-        }
-
-        // Check for company name matches
-        if (description.includes(searchQuery)) {
-          console.log(`Company name match: ${result.symbol} (${result.description})`);
           return true;
         }
 
