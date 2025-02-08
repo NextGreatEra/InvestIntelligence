@@ -166,5 +166,63 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Add these new endpoints after the existing portfolio endpoints
+  app.get('/api/watchlist', async (req, res) => {
+    try {
+      const watchlistItems = await storage.getWatchlistItemsWithAssets();
+      res.json(watchlistItems);
+    } catch (error) {
+      console.error('Error fetching watchlist:', error);
+      res.status(500).json({ message: 'Failed to fetch watchlist items' });
+    }
+  });
+
+  app.post('/api/watchlist', async (req, res) => {
+    try {
+      console.log('Received watchlist item request:', req.body);
+
+      // Parse and validate the asset data
+      const assetData = insertAssetSchema.parse({
+        symbol: req.body.symbol,
+        name: req.body.name,
+        type: req.body.type,
+        currentPrice: req.body.currentPrice || req.body.current_price
+      });
+
+      console.log('Validated asset data:', assetData);
+
+      // Create the asset first
+      const asset = await storage.createAsset(assetData);
+      console.log('Asset created:', asset);
+
+      // Create the watchlist item
+      const watchlistItem = await storage.createWatchlistItem({
+        assetId: asset.id
+      });
+
+      console.log('Watchlist item created:', watchlistItem);
+      res.json(watchlistItem);
+    } catch (error) {
+      console.error('Error adding watchlist item:', error);
+      res.status(400).json({ 
+        message: error instanceof Error ? error.message : 'Failed to add asset to watchlist' 
+      });
+    }
+  });
+
+  app.delete('/api/watchlist/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid watchlist item ID' });
+      }
+      await storage.removeWatchlistItem(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error removing watchlist item:', error);
+      res.status(500).json({ message: 'Failed to remove watchlist item' });
+    }
+  });
+
   return server;
 }

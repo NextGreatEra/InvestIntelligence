@@ -5,22 +5,26 @@ import AssetSearch from "./asset-search";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface AssetSearchResult {
   id: string;
   symbol: string;
   name: string;
   current_price: number;
+  type: 'stock' | 'crypto';
 }
 
 export default function AddAssetButton() {
   const [open, setOpen] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState<AssetSearchResult | null>(null);
+  const [isWatchlist, setIsWatchlist] = useState(false);
   const { toast } = useToast();
 
   const addAssetMutation = useMutation({
     mutationFn: async (asset: AssetSearchResult) => {
-      const response = await fetch("/api/portfolio", {
+      const endpoint = isWatchlist ? "/api/watchlist" : "/api/portfolio";
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -29,25 +33,29 @@ export default function AddAssetButton() {
           symbol: asset.symbol.toUpperCase(),
           name: asset.name,
           currentPrice: asset.current_price,
-          type: 'crypto'
+          type: asset.type
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to add asset");
+        throw new Error(errorData.message || `Failed to add asset to ${isWatchlist ? 'watchlist' : 'portfolio'}`);
       }
 
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+      // Invalidate both queries as the asset might have been added to either
+      if (isWatchlist) {
+        queryClient.invalidateQueries({ queryKey: ["/api/watchlist"] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+      }
       toast({
         title: "Success",
-        description: "Asset added successfully",
+        description: `Asset added to ${isWatchlist ? 'watchlist' : 'portfolio'} successfully`,
       });
       setOpen(false);
-      setSelectedAsset(null);
     },
     onError: (error: Error) => {
       toast({
@@ -71,9 +79,25 @@ export default function AddAssetButton() {
 
       <AssetSearch
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(isOpen) => {
+          setOpen(isOpen);
+          if (!isOpen) {
+            setIsWatchlist(false); // Reset to portfolio mode when closing
+          }
+        }}
         onSelect={handleAssetSelect}
-      />
+      >
+        <div className="flex items-center space-x-2 mt-4 mb-2">
+          <Switch
+            id="add-to-watchlist"
+            checked={isWatchlist}
+            onCheckedChange={setIsWatchlist}
+          />
+          <Label htmlFor="add-to-watchlist">
+            Add to {isWatchlist ? 'Watchlist' : 'Portfolio'}
+          </Label>
+        </div>
+      </AssetSearch>
     </>
   );
 }
