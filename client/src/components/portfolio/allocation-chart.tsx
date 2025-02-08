@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pie } from "@visx/shape";
 import { Group } from "@visx/group";
-import { useSpring, animated } from "framer-motion";
+import { motion } from "framer-motion";
 import { useDrag } from "@use-gesture/react";
 import { scaleOrdinal } from "@visx/scale";
 import { Asset } from "@shared/schema";
@@ -31,7 +31,7 @@ const colors = [
 
 export default function AllocationChart({ width, height, data, onAllocationChange }: AllocationChartProps) {
   const [dragging, setDragging] = useState<number | null>(null);
-  
+
   // Create color scale
   const getColor = scaleOrdinal({
     domain: data.map(d => d.asset.symbol),
@@ -55,24 +55,26 @@ export default function AllocationChart({ width, height, data, onAllocationChang
   const bindDrag = useDrag(({ movement: [mx, my], first, last, active, event }) => {
     event?.preventDefault();
     if (first) setDragging(null);
-    
+
     if (active && dragging !== null) {
-      // Calculate new allocation based on drag movement
       const currentItem = pieData.find(d => d.id === dragging);
       if (!currentItem || !onAllocationChange) return;
 
       const dragAngle = Math.atan2(my, mx);
       const dragDistance = Math.sqrt(mx * mx + my * my);
-      
+
       // Convert drag movement to allocation change
       const allocationChange = (dragDistance * Math.cos(dragAngle)) / (radius * 2);
       const newAllocation = Math.max(0, Math.min(100, currentItem.value + allocationChange * 100));
-      
+
       onAllocationChange(dragging, newAllocation);
     }
-    
+
     if (last) setDragging(null);
   });
+
+  // Don't render if dimensions are invalid
+  if (width < 10 || height < 10) return null;
 
   return (
     <svg width={width} height={height}>
@@ -80,7 +82,7 @@ export default function AllocationChart({ width, height, data, onAllocationChang
         <Pie
           data={pieData}
           pieValue={d => d.value}
-          outerRadius={radius}
+          outerRadius={radius - 20} // Add some padding
           innerRadius={radius * 0.6}
           cornerRadius={3}
           padAngle={0.02}
@@ -90,13 +92,15 @@ export default function AllocationChart({ width, height, data, onAllocationChang
               const [centroidX, centroidY] = pie.path.centroid(arc);
               const hasSpaceForLabel = arc.endAngle - arc.startAngle >= 0.1;
               const item = arc.data;
-              
+
               return (
-                <g
+                <motion.g
                   key={`arc-${item.id}`}
                   onMouseDown={() => setDragging(item.id)}
                   className="cursor-pointer"
                   {...bindDrag()}
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
                   <path
                     d={pie.path(arc) || undefined}
@@ -106,14 +110,14 @@ export default function AllocationChart({ width, height, data, onAllocationChang
                     }`}
                   />
                   {hasSpaceForLabel && (
-                    <g>
+                    <>
                       <text
                         x={centroidX}
                         y={centroidY - 8}
                         fill="white"
                         fontSize={12}
                         textAnchor="middle"
-                        className="select-none pointer-events-none"
+                        className="select-none pointer-events-none font-medium"
                       >
                         {item.asset.symbol}
                       </text>
@@ -127,9 +131,9 @@ export default function AllocationChart({ width, height, data, onAllocationChang
                       >
                         {`${item.value.toFixed(1)}%`}
                       </text>
-                    </g>
+                    </>
                   )}
-                </g>
+                </motion.g>
               );
             });
           }}
