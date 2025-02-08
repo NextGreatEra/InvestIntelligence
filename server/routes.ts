@@ -80,7 +80,8 @@ export function registerRoutes(app: Express) {
         symbol: req.body.symbol,
         name: req.body.name,
         type: req.body.type,
-        currentPrice: req.body.currentPrice || req.body.current_price // Handle both property names
+        currentPrice: req.body.currentPrice || req.body.current_price, // Handle both property names
+        price_change_percentage_24h: req.body.price_change_percentage_24h
       });
 
       console.log('Validated asset data:', assetData);
@@ -114,7 +115,7 @@ export function registerRoutes(app: Express) {
 
       const coins = await refreshTopCoins();
       const cryptoMarkets = coins
-        .filter(coin => ['BTC', 'ETH'].includes(coin.symbol))
+        .filter(coin => ['BTC', 'ETH', 'LINK'].includes(coin.symbol))
         .map(coin => ({
           id: coin.id.toString(),
           symbol: coin.symbol,

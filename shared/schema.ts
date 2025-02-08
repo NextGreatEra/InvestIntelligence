@@ -8,6 +8,7 @@ export const assets = pgTable("assets", {
   name: text("name").notNull(),
   type: text("type").notNull(),
   currentPrice: decimal("current_price").notNull(),
+  price_change_percentage_24h: decimal("price_change_percentage_24h"),
   lastUpdated: timestamp("last_updated").notNull()
 });
 
