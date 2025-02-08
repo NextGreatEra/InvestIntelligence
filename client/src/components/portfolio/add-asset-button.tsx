@@ -11,6 +11,7 @@ interface AssetSearchResult {
   symbol: string;
   name: string;
   current_price: number;
+  price_change_percentage_24h?: number | null;
 }
 
 export default function AddAssetButton() {
@@ -29,6 +30,7 @@ export default function AddAssetButton() {
           symbol: asset.symbol.toUpperCase(),
           name: asset.name,
           currentPrice: asset.current_price,
+          priceChangePercentage24h: asset.price_change_percentage_24h,
           type: 'crypto'
         }),
       });

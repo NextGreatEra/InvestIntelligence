@@ -33,9 +33,10 @@ export const insertAssetSchema = createInsertSchema(assets)
     currentPrice: z.union([z.string(), z.number()]).transform(val => 
       typeof val === 'string' ? val : val.toString()
     ),
-    priceChangePercentage24h: z.union([z.string(), z.number(), z.null()]).optional().transform(val =>
-      val === null ? null : typeof val === 'string' ? val : val.toString()
-    )
+    priceChangePercentage24h: z.union([z.string(), z.number(), z.null()]).optional().transform(val => {
+      if (val === undefined || val === null) return null;
+      return typeof val === 'string' ? val : val.toString();
+    })
   })
   .omit({ 
     id: true, 
