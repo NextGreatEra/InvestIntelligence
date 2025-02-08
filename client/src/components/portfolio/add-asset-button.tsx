@@ -21,6 +21,7 @@ export default function AddAssetButton() {
 
   const addAssetMutation = useMutation({
     mutationFn: async (asset: AssetSearchResult) => {
+      console.log('Adding asset:', asset); // Debug log
       const response = await fetch("/api/portfolio", {
         method: "POST",
         headers: {
@@ -30,8 +31,7 @@ export default function AddAssetButton() {
           symbol: asset.symbol.toUpperCase(),
           name: asset.name,
           currentPrice: asset.current_price,
-          price_change_percentage_24h: asset.price_change_percentage_24h,
-          priceChangePercentage24h: asset.price_change_percentage_24h, // Add both versions
+          priceChangePercentage24h: asset.price_change_percentage_24h || null,
           type: 'crypto'
         }),
       });
@@ -62,6 +62,7 @@ export default function AddAssetButton() {
   });
 
   const handleAssetSelect = (asset: AssetSearchResult) => {
+    console.log('Selected asset:', asset); // Debug log
     addAssetMutation.mutate(asset);
   };
 
