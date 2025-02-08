@@ -23,7 +23,6 @@ export default function AssetList() {
 
   const removeAssetMutation = useMutation({
     mutationFn: async (assetId: number) => {
-      console.log('Attempting to delete asset with ID:', assetId);
       const response = await fetch(`/api/portfolio/${assetId}`, {
         method: "DELETE",
       });
@@ -42,7 +41,6 @@ export default function AssetList() {
       });
     },
     onError: (error: Error) => {
-      console.error('Delete error:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -53,12 +51,21 @@ export default function AssetList() {
 
   const updateAllocationMutation = useMutation({
     mutationFn: async ({id, allocation}: {id: number, allocation: number}) => {
+      // Validate total allocation
+      const otherAssets = assets.filter(a => a.id !== id);
+      const otherTotal = otherAssets.reduce((sum, asset) => sum + asset.allocation, 0);
+      const newTotal = otherTotal + allocation;
+
+      if (newTotal > 100) {
+        throw new Error(`Total allocation would exceed 100% (${newTotal.toFixed(1)}%)`);
+      }
+
       const response = await fetch(`/api/portfolio/${id}/allocation`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ allocation }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || "Failed to update allocation");
@@ -77,12 +84,6 @@ export default function AssetList() {
   });
 
   const handleAllocationChange = async (assetId: number, newAllocation: number) => {
-    const asset = assets.find(a => a.id === assetId);
-    if (!asset) return;
-
-    const otherAssets = assets.filter(a => a.id !== assetId);
-    const totalRemaining = 100 - newAllocation;
-    
     if (newAllocation < 0 || newAllocation > 100) {
       toast({
         title: "Invalid allocation",
@@ -92,35 +93,17 @@ export default function AssetList() {
       return;
     }
 
-    // Calculate proportional allocations for other assets
-    const currentOtherTotal = otherAssets.reduce((sum, a) => sum + a.allocation, 0);
-    const scalingFactor = currentOtherTotal > 0 ? totalRemaining / currentOtherTotal : 0;
-
     try {
-      // Update the changed asset first
       await updateAllocationMutation.mutateAsync({
         id: assetId,
         allocation: newAllocation
       });
-
-      // Update other assets proportionally
-      for (const otherAsset of otherAssets) {
-        const newOtherAllocation = currentOtherTotal > 0 
-          ? otherAsset.allocation * scalingFactor 
-          : totalRemaining / otherAssets.length;
-          
-        await updateAllocationMutation.mutateAsync({
-          id: otherAsset.id,
-          allocation: newOtherAllocation
-        });
-      }
     } catch (error) {
-      console.error('Error updating allocations:', error);
+      console.error('Error updating allocation:', error);
     }
   };
 
   const handleDelete = (assetId: number) => {
-    console.log('Delete requested for asset:', assetId);
     if (window.confirm('Are you sure you want to remove this asset?')) {
       removeAssetMutation.mutate(assetId);
     }
@@ -130,7 +113,7 @@ export default function AssetList() {
     return <AssetListSkeleton />;
   }
 
-  const sortedAssets = [...assets].sort((a, b) => a.rank - b.rank);
+  const sortedAssets = [...assets].sort((a, b) => b.value - a.value);
   const totalAllocation = sortedAssets.reduce((sum, asset) => sum + asset.allocation, 0);
 
   return (
@@ -146,12 +129,15 @@ export default function AssetList() {
               className="flex items-center justify-between p-4 rounded-lg bg-card border"
             >
               <div className="flex-1">
-                <h3 className="font-medium">{asset.symbol}</h3>
+                <h3 className="font-medium">{asset.symbol.toUpperCase()}</h3>
                 <p className="text-sm text-muted-foreground">{asset.name}</p>
               </div>
               <div className="flex-1">
                 <p className="font-medium">
-                  ${Number(asset.currentPrice).toLocaleString()}
+                  ${Number(asset.currentPrice).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </p>
                 <div className="flex items-center gap-2">
                   <Slider
@@ -168,7 +154,10 @@ export default function AssetList() {
               </div>
               <div className="flex-1 text-right">
                 <p className="font-medium">
-                  ${asset.value.toLocaleString()}
+                  ${((asset.currentPrice * asset.allocation) / 100).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </p>
                 <div className="flex items-center justify-end gap-1">
                   {asset.priceChange24h >= 0 ? (
