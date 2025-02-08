@@ -8,6 +8,7 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
       throw new Error('Missing FINNHUB_API_KEY');
     }
 
+    console.log(`Searching stocks with query: ${query}`);
     const response = await fetch(
       `${FINNHUB_API}/search?q=${encodeURIComponent(query)}&token=${process.env.FINNHUB_API_KEY}`
     );
@@ -17,28 +18,43 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
     }
 
     const data = await response.json();
+    console.log('Raw search results:', data.result?.length || 0, 'items');
 
     const filteredResults = (data.result || [])
       .filter((result: any) => {
         // Get uppercase versions for case-insensitive comparison
-        const type = result.type?.toUpperCase() || '';
-        const symbol = result.symbol || '';
-        const description = result.description || '';
+        const type = (result.type || '').toUpperCase();
+        const symbol = (result.symbol || '').toUpperCase();
+        const description = (result.description || '').toUpperCase();
         const searchQuery = query.toUpperCase();
 
-        // Accept common stock types and ADRs
-        const validTypes = ['STOCK', 'EQS', 'ADR'];
-        const isValidType = validTypes.some(t => type.includes(t));
+        // More permissive type check - accept any stock-like type
+        const isStockType = type.includes('STOCK') || 
+                           type.includes('EQS') || 
+                           type.includes('ETF') || 
+                           type.includes('ADR') ||
+                           type === 'COMMON';
 
-        // Check if it's a valid stock and matches either symbol or company name
-        return isValidType && 
-               symbol && 
-               description &&
-               !symbol.includes('.') && // Exclude non-standard symbols
-               (symbol.toUpperCase().includes(searchQuery) || 
-                description.toUpperCase().includes(searchQuery));
+        // More lenient match criteria
+        const matchesSearch = symbol.includes(searchQuery) || 
+                            description.includes(searchQuery);
+
+        // Basic validation
+        const isValid = symbol && 
+                       description && 
+                       !symbol.includes('.') && // Exclude non-standard symbols
+                       isStockType &&
+                       matchesSearch;
+
+        if (!isValid) {
+          console.log(`Filtered out: ${symbol} (${type}) - ${description}`);
+        }
+
+        return isValid;
       })
       .slice(0, 5);
+
+    console.log(`Filtered to ${filteredResults.length} results`);
 
     if (filteredResults.length === 0) {
       return [];
@@ -75,7 +91,9 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
       })
     );
 
-    return resultsWithPrices.filter((result): result is Partial<InsertAsset> => result !== null);
+    const validResults = resultsWithPrices.filter((result): result is Partial<InsertAsset> => result !== null);
+    console.log(`Final results with prices: ${validResults.length} items`);
+    return validResults;
   } catch (error) {
     console.error('Finnhub search error:', error);
     return [];
