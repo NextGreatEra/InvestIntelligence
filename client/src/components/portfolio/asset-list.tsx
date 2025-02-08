@@ -19,7 +19,14 @@ interface PortfolioItem {
   assetId: number;
   rank: number;
   allocation: string;
-  asset: Asset;
+  asset: {
+    id: number;
+    symbol: string;
+    name: string;
+    currentPrice: string;
+    priceChangePercentage24h: string | null;
+    type: 'stock' | 'crypto';
+  };
 }
 
 export default function AssetList() {
