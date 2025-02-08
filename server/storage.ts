@@ -12,6 +12,7 @@ export interface IStorage {
   removeAsset(id: number): Promise<void>;
 
   getPortfolioItems(): Promise<PortfolioItem[]>;
+  getPortfolioItemsWithAssets(): Promise<(PortfolioItem & { asset: Asset })[]>;
   getPortfolioItem(id: number): Promise<PortfolioItem | undefined>;
   createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem>;
   updatePortfolioRank(id: number, newRank: number): Promise<PortfolioItem>;
@@ -83,13 +84,27 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(portfolioItems.rank));
   }
 
+  async getPortfolioItemsWithAssets(): Promise<(PortfolioItem & { asset: Asset })[]> {
+    const result = await db.select({
+      ...portfolioItems,
+      asset: assets
+    })
+    .from(portfolioItems)
+    .leftJoin(assets, eq(portfolioItems.assetId, assets.id))
+    .orderBy(asc(portfolioItems.rank));
+
+    return result.map(item => ({
+      ...item,
+      asset: item.asset
+    }));
+  }
+
   async getPortfolioItem(id: number): Promise<PortfolioItem | undefined> {
     const [item] = await db.select().from(portfolioItems).where(eq(portfolioItems.id, id));
     return item;
   }
 
   async createPortfolioItem(insertItem: InsertPortfolioItem): Promise<PortfolioItem> {
-    // Get the current highest rank using a raw SQL query
     const result = await db.select({
       maxRank: sql<number>`COALESCE(MAX(rank), 0)`
     }).from(portfolioItems);
@@ -100,7 +115,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...insertItem,
         rank: newRank,
-        allocation: "0", // Set a default allocation of 0
+        allocation: "0",
         lastUpdated: new Date()
       })
       .returning();

@@ -7,15 +7,16 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 
-interface AssetWithDetails extends Asset {
+interface PortfolioItem {
+  id: number;
+  assetId: number;
   rank: number;
-  value: number;
-  priceChange24h: number;
-  portfolioItemId: number; // Add this to track the portfolio item ID
+  allocation: string;
+  asset: Asset;
 }
 
 export default function AssetList() {
-  const { data: assets = [], isLoading } = useQuery<AssetWithDetails[]>({
+  const { data: portfolioItems = [], isLoading } = useQuery<PortfolioItem[]>({
     queryKey: ["/api/portfolio"],
   });
   const { toast } = useToast();
@@ -58,7 +59,7 @@ export default function AssetList() {
     return <AssetListSkeleton />;
   }
 
-  const sortedAssets = [...assets].sort((a, b) => Number(b.currentPrice) - Number(a.currentPrice));
+  const sortedPortfolioItems = [...portfolioItems].sort((a, b) => Number(b.asset.currentPrice) - Number(a.asset.currentPrice));
 
   return (
     <Card>
@@ -67,44 +68,29 @@ export default function AssetList() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {sortedAssets.map((asset) => (
+          {sortedPortfolioItems.map((item) => (
             <div
-              key={asset.id}
+              key={item.id}
               className="flex items-center justify-between p-4 rounded-lg bg-card border"
             >
               <div className="flex-1">
-                <h3 className="font-medium">{asset.symbol.toUpperCase()}</h3>
-                <p className="text-sm text-muted-foreground">{asset.name}</p>
+                <h3 className="font-medium">{item.asset.symbol.toUpperCase()}</h3>
+                <p className="text-sm text-muted-foreground">{item.asset.name}</p>
               </div>
               <div className="flex-1">
                 <p className="font-medium">
-                  ${Number(asset.currentPrice).toLocaleString(undefined, {
+                  ${Number(item.asset.currentPrice).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
                 </p>
-                <div className="flex items-center justify-end gap-1">
-                  {asset.priceChange24h >= 0 ? (
-                    <ArrowUpIcon className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <ArrowDownIcon className="h-4 w-4 text-red-500" />
-                  )}
-                  <p
-                    className={
-                      asset.priceChange24h >= 0
-                        ? "text-green-500"
-                        : "text-red-500"
-                    }
-                  >
-                    {asset.priceChange24h ? Math.abs(asset.priceChange24h).toFixed(2) : '0.00'}%
-                  </p>
-                </div>
+                {/* Price change removed as it's not directly available in the new structure */}
               </div>
               <div className="ml-4">
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDelete(asset.portfolioItemId)}
+                  onClick={() => handleDelete(item.id)}
                 >
                   <Trash2Icon className="h-4 w-4" />
                 </Button>

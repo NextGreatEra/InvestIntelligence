@@ -11,6 +11,16 @@ export function registerRoutes(app: Express) {
     res.json({ status: 'ok' });
   });
 
+  app.get('/api/portfolio', async (req, res) => {
+    try {
+      const portfolioItems = await storage.getPortfolioItemsWithAssets();
+      res.json(portfolioItems);
+    } catch (error) {
+      console.error('Error fetching portfolio:', error);
+      res.status(500).json({ message: 'Failed to fetch portfolio items' });
+    }
+  });
+
   app.get('/api/assets/search', async (req, res) => {
     const { q } = req.query;
     if (typeof q !== 'string') {
