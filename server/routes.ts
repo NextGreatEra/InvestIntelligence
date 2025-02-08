@@ -80,7 +80,7 @@ export function registerRoutes(app: Express) {
         symbol: req.body.symbol,
         name: req.body.name,
         type: req.body.type,
-        currentPrice: req.body.current_price // Match the search results format
+        currentPrice: req.body.current_price.toString() // Convert the price to string and use the correct property name
       });
 
       console.log('Validated asset data:', assetData);
