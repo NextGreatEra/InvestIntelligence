@@ -60,7 +60,7 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
             symbol: result.symbol,
             name: result.description,
             type: 'stock',
-            currentPrice: priceData.c // Return price as a number
+            current_price: priceData.c // Match the crypto API response format
           };
         } catch (error) {
           console.error(`Failed to fetch price for ${result.symbol}:`, error);
