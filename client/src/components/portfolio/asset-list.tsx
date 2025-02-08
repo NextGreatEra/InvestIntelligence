@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Asset } from "@shared/schema";
 import { Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import AllocationChart from "./allocation-chart";
@@ -83,6 +84,18 @@ export default function AssetList() {
   };
 
   const handleAllocationChange = (id: number, newAllocation: number) => {
+    const currentTotal = portfolioItems.reduce((sum, item) => 
+      sum + (item.id === id ? 0 : parseFloat(item.allocation || "0")), 0);
+
+    if (currentTotal + newAllocation > 100) {
+      toast({
+        title: "Warning",
+        description: "Total allocation cannot exceed 100%",
+        variant: "destructive",
+      });
+      return;
+    }
+
     updateAllocationMutation.mutate({ id, allocation: newAllocation });
   };
 
@@ -92,6 +105,11 @@ export default function AssetList() {
 
   const sortedPortfolioItems = [...portfolioItems].sort((a, b) => 
     parseFloat(b.allocation || "0") - parseFloat(a.allocation || "0")
+  );
+
+  const totalAllocation = sortedPortfolioItems.reduce(
+    (sum, item) => sum + parseFloat(item.allocation || "0"), 
+    0
   );
 
   return (
@@ -105,31 +123,30 @@ export default function AssetList() {
             width={400}
             height={400}
             data={sortedPortfolioItems}
-            onAllocationChange={handleAllocationChange}
           />
         </div>
         <div className="space-y-4">
           {sortedPortfolioItems.map((item) => (
             <div
               key={item.id}
-              className="flex items-center justify-between p-4 rounded-lg bg-card border"
+              className="flex flex-col space-y-2 p-4 rounded-lg bg-card border"
             >
-              <div className="flex-1">
-                <h3 className="font-medium">{item.asset.symbol.toUpperCase()}</h3>
-                <p className="text-sm text-muted-foreground">{item.asset.name}</p>
-              </div>
-              <div className="flex-1">
-                <p className="font-medium">
-                  ${Number(item.asset.currentPrice).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {parseFloat(item.allocation || "0").toFixed(1)}% Allocation
-                </p>
-              </div>
-              <div className="ml-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium">{item.asset.symbol.toUpperCase()}</h3>
+                  <p className="text-sm text-muted-foreground">{item.asset.name}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium">
+                    ${Number(item.asset.currentPrice).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {parseFloat(item.allocation || "0").toFixed(1)}% Allocation
+                  </p>
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -138,8 +155,30 @@ export default function AssetList() {
                   <Trash2Icon className="h-4 w-4" />
                 </Button>
               </div>
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <Slider
+                    value={[parseFloat(item.allocation || "0")]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="w-full"
+                    onValueChange={([value]) => handleAllocationChange(item.id, value)}
+                  />
+                </div>
+                <div className="w-16 text-right">
+                  <span className="text-sm font-medium">
+                    {parseFloat(item.allocation || "0").toFixed(1)}%
+                  </span>
+                </div>
+              </div>
             </div>
           ))}
+          {totalAllocation < 100 && (
+            <p className="text-sm text-muted-foreground text-center">
+              Remaining allocation: {(100 - totalAllocation).toFixed(1)}%
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

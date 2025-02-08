@@ -1,8 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Pie } from "@visx/shape";
 import { Group } from "@visx/group";
-import { motion } from "framer-motion";
-import { useDrag } from "@use-gesture/react";
 import { scaleOrdinal } from "@visx/scale";
 import { Asset } from "@shared/schema";
 
@@ -15,7 +13,6 @@ interface AllocationChartProps {
     allocation: string;
     asset: Asset;
   }>;
-  onAllocationChange?: (id: number, newAllocation: number) => void;
 }
 
 const colors = [
@@ -29,9 +26,7 @@ const colors = [
   "#b91c1c", // red-700
 ];
 
-export default function AllocationChart({ width, height, data, onAllocationChange }: AllocationChartProps) {
-  const [dragging, setDragging] = useState<number | null>(null);
-
+export default function AllocationChart({ width, height, data }: AllocationChartProps) {
   // Create color scale
   const getColor = scaleOrdinal({
     domain: data.map(d => d.asset.symbol),
@@ -51,29 +46,7 @@ export default function AllocationChart({ width, height, data, onAllocationChang
   const centerY = height / 2;
   const centerX = width / 2;
 
-  // Handle drag gesture
-  const bindDrag = useDrag(({ movement: [mx, my], first, last, active, event }) => {
-    event?.preventDefault();
-    if (first) setDragging(null);
-
-    if (active && dragging !== null) {
-      const currentItem = pieData.find(d => d.id === dragging);
-      if (!currentItem || !onAllocationChange) return;
-
-      const dragAngle = Math.atan2(my, mx);
-      const dragDistance = Math.sqrt(mx * mx + my * my);
-
-      // Convert drag movement to allocation change
-      const allocationChange = (dragDistance * Math.cos(dragAngle)) / (radius * 2);
-      const newAllocation = Math.max(0, Math.min(100, currentItem.value + allocationChange * 100));
-
-      onAllocationChange(dragging, newAllocation);
-    }
-
-    if (last) setDragging(null);
-  });
-
-  // Don't render if dimensions are invalid
+  // Don't render if dimensions are invalid or no data
   if (width < 10 || height < 10 || !data.length) return null;
 
   return (
@@ -94,20 +67,11 @@ export default function AllocationChart({ width, height, data, onAllocationChang
               const item = arc.data;
 
               return (
-                <motion.g
-                  key={`arc-${item.id}`}
-                  onMouseDown={() => setDragging(item.id)}
-                  className="cursor-pointer"
-                  {...bindDrag()}
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                >
+                <g key={`arc-${item.id}`}>
                   <path
                     d={pie.path(arc) || undefined}
                     fill={getColor(item.asset.symbol)}
-                    className={`transition-all duration-200 ${
-                      dragging === item.id ? 'opacity-80' : 'opacity-100'
-                    }`}
+                    className="transition-opacity duration-200"
                   />
                   {hasSpaceForLabel && (
                     <>
@@ -117,7 +81,7 @@ export default function AllocationChart({ width, height, data, onAllocationChang
                         fill="white"
                         fontSize={12}
                         textAnchor="middle"
-                        className="select-none pointer-events-none font-medium"
+                        className="select-none font-medium"
                       >
                         {item.asset.symbol}
                       </text>
@@ -127,13 +91,13 @@ export default function AllocationChart({ width, height, data, onAllocationChang
                         fill="white"
                         fontSize={10}
                         textAnchor="middle"
-                        className="select-none pointer-events-none"
+                        className="select-none"
                       >
                         {`${item.value.toFixed(1)}%`}
                       </text>
                     </>
                   )}
-                </motion.g>
+                </g>
               );
             });
           }}
