@@ -196,9 +196,9 @@ export async function getPrice(symbol: string): Promise<number> {
 
     const price = usdData.price || 0;
 
-    // Update price in database
+    // Update price and price change in database
     if (asset) {
-      await storage.updateAssetPrice(asset.id, price);
+      await storage.updateAssetPrice(asset.id, price, usdData.percent_change_24h);
     }
 
     return price;

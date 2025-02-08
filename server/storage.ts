@@ -7,7 +7,7 @@ export interface IStorage {
   getAsset(id: number): Promise<Asset | undefined>;
   getAssetBySymbol(symbol: string): Promise<Asset | undefined>;
   createAsset(asset: InsertAsset): Promise<Asset>;
-  updateAssetPrice(id: number, price: number): Promise<Asset>;
+  updateAssetPrice(id: number, price: number, priceChangePercentage24h?: number | null): Promise<Asset>;
   searchAssets(query: string): Promise<Asset[]>;
   removeAsset(id: number): Promise<void>;
 
@@ -61,16 +61,17 @@ export class DatabaseStorage implements IStorage {
     return asset;
   }
 
-  async updateAssetPrice(id: number, price: number): Promise<Asset> {
+  async updateAssetPrice(id: number, price: number, priceChangePercentage24h?: number | null): Promise<Asset> {
     const formattedPrice = price.toFixed(8);
-    const [asset] = await db.update(assets)
-      .set({ 
+    const [asset] = await db
+      .update(assets)
+      .set({
         currentPrice: formattedPrice,
-        lastUpdated: new Date() 
+        priceChangePercentage24h: priceChangePercentage24h?.toString() || null,
+        lastUpdated: new Date()
       })
       .where(eq(assets.id, id))
       .returning();
-    if (!asset) throw new Error("Asset not found");
     return asset;
   }
 
