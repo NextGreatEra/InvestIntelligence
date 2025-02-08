@@ -37,20 +37,43 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
         // Only include stocks from major US exchanges (no extension in symbol)
         if (symbol.includes('.')) return false;
 
-        // Normalize the search terms
-        const searchTerms = searchQuery.split(/\s+/);
-        
-        // Check if all search terms are found in either symbol or description
-        const allTermsFound = searchTerms.every(term => 
-          symbol.includes(term) || description.includes(term)
-        );
+        // Check for exact symbol match first
+        if (symbol === searchQuery) {
+          console.log(`Exact symbol match: ${result.symbol}`);
+          return true;
+        }
 
-        if (allTermsFound) {
-          console.log(`Match found: ${result.symbol} (${result.description})`);
+        // Check if symbol starts with search query
+        if (symbol.startsWith(searchQuery)) {
+          console.log(`Symbol prefix match: ${result.symbol}`);
+          return true;
+        }
+
+        // Check for company name matches
+        if (description.includes(searchQuery)) {
+          console.log(`Company name match: ${result.symbol} (${result.description})`);
+          return true;
+        }
+
+        // Check for partial symbol matches last
+        if (symbol.includes(searchQuery)) {
+          console.log(`Partial symbol match: ${result.symbol}`);
           return true;
         }
 
         return false;
+      })
+      .sort((a: any, b: any) => {
+        // Prioritize exact matches and shorter symbols
+        const aScore = a.symbol.toLowerCase() === query.toLowerCase() ? 3 :
+                      a.symbol.toLowerCase().startsWith(query.toLowerCase()) ? 2 :
+                      a.description.toLowerCase().includes(query.toLowerCase()) ? 1 : 0;
+        const bScore = b.symbol.toLowerCase() === query.toLowerCase() ? 3 :
+                      b.symbol.toLowerCase().startsWith(query.toLowerCase()) ? 2 :
+                      b.description.toLowerCase().includes(query.toLowerCase()) ? 1 : 0;
+        
+        if (aScore !== bScore) return bScore - aScore;
+        return a.symbol.length - b.symbol.length;
       })
       .sort((a: any, b: any) => {
         const aScore = (a.symbol.toLowerCase().includes(query.toLowerCase()) ? 2 : 0) +
