@@ -50,15 +50,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAsset(insertAsset: InsertAsset): Promise<Asset> {
+    // Ensure price is properly formatted
+    const formattedPrice = Number(insertAsset.currentPrice).toFixed(8);
     const [asset] = await db.insert(assets)
-      .values({ ...insertAsset, lastUpdated: new Date() })
+      .values({ 
+        ...insertAsset,
+        currentPrice: formattedPrice,
+        lastUpdated: new Date() 
+      })
       .returning();
     return asset;
   }
 
   async updateAssetPrice(id: number, price: number): Promise<Asset> {
+    const formattedPrice = price.toFixed(8); // Ensure consistent price format
     const [asset] = await db.update(assets)
-      .set({ currentPrice: price.toString(), lastUpdated: new Date() })
+      .set({ 
+        currentPrice: formattedPrice,
+        lastUpdated: new Date() 
+      })
       .where(eq(assets.id, id))
       .returning();
     if (!asset) throw new Error("Asset not found");

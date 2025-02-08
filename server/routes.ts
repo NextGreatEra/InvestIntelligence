@@ -172,7 +172,7 @@ export function registerRoutes(app: Express) {
     try {
       const { symbol, name, currentPrice, type = 'crypto' } = req.body;
 
-      if (!symbol || !name || !currentPrice) {
+      if (!symbol || !name || currentPrice === undefined) {
         console.log('Missing fields:', { symbol, name, currentPrice });
         return res.status(400).json({ 
           message: "Missing required fields",
@@ -184,15 +184,21 @@ export function registerRoutes(app: Express) {
       let asset = await storage.getAssetBySymbol(symbol);
       console.log('Existing asset:', asset);
 
+      // Convert price to string with proper precision
+      const formattedPrice = Number(currentPrice).toFixed(8);
+
       if (!asset) {
         const assetData = {
           symbol,
           name,
           type,
-          currentPrice: currentPrice.toString(),
+          currentPrice: formattedPrice,
         };
         console.log('Creating new asset:', assetData);
         asset = await storage.createAsset(assetData);
+      } else {
+        // Update the price if asset exists
+        asset = await storage.updateAssetPrice(asset.id, Number(formattedPrice));
       }
 
       // Create portfolio item
