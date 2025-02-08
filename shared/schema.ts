@@ -28,8 +28,10 @@ export const priceHistory = pgTable("price_history", {
 
 export const insertAssetSchema = createInsertSchema(assets)
   .extend({
-    currentPrice: z.number().transform(val => val.toString()),
-    type: z.enum(["stock", "crypto"])
+    type: z.enum(["stock", "crypto"]),
+    currentPrice: z.union([z.string(), z.number()]).transform(val => 
+      typeof val === 'string' ? val : val.toString()
+    )
   })
   .omit({ 
     id: true, 

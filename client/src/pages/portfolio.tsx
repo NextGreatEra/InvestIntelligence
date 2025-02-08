@@ -85,8 +85,8 @@ export default function Portfolio() {
     addAssetMutation.mutate({
       symbol: selectedAsset.symbol,
       name: selectedAsset.name,
-      currentPrice: selectedAsset.current_price,
-      type: selectedAsset.type
+      type: selectedAsset.type,
+      currentPrice: selectedAsset.current_price // Use current_price from the search results
     });
   }, [selectedAsset, toast, addAssetMutation]);
 

@@ -73,21 +73,21 @@ export function registerRoutes(app: Express) {
   // Add portfolio item endpoint
   app.post('/api/portfolio', async (req, res) => {
     try {
-      console.log('Received portfolio item request:', req.body); // Debug log
+      console.log('Received portfolio item request:', req.body);
 
       // Parse and validate the asset data
       const assetData = insertAssetSchema.parse({
         symbol: req.body.symbol,
         name: req.body.name,
         type: req.body.type,
-        currentPrice: req.body.currentPrice.toString()
+        currentPrice: req.body.current_price // Match the search results format
       });
 
-      console.log('Validated asset data:', assetData); // Debug log
+      console.log('Validated asset data:', assetData);
 
       // Create the asset first
       const asset = await storage.createAsset(assetData);
-      console.log('Asset created:', asset); // Debug log
+      console.log('Asset created:', asset);
 
       // Create the portfolio item with default rank
       const portfolioItem = await storage.createPortfolioItem({
@@ -95,7 +95,7 @@ export function registerRoutes(app: Express) {
         rank: 0
       });
 
-      console.log('Portfolio item created:', portfolioItem); // Debug log
+      console.log('Portfolio item created:', portfolioItem);
       res.json(portfolioItem);
     } catch (error) {
       console.error('Error adding portfolio item:', error);
