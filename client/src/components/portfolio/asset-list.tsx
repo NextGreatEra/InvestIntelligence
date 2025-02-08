@@ -51,19 +51,10 @@ export default function AssetList() {
 
   const updateAllocationMutation = useMutation({
     mutationFn: async ({id, allocation}: {id: number, allocation: number}) => {
-      // Validate total allocation
-      const otherAssets = assets.filter(a => a.id !== id);
-      const otherTotal = otherAssets.reduce((sum, asset) => sum + asset.allocation, 0);
-      const newTotal = otherTotal + allocation;
-
-      if (newTotal > 100) {
-        throw new Error(`Total allocation would exceed 100% (${newTotal.toFixed(1)}%)`);
-      }
-
       const response = await fetch(`/api/portfolio/${id}/allocation`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ allocation }),
+        body: JSON.stringify({ allocation: Number(allocation) }),
       });
 
       if (!response.ok) {
@@ -84,10 +75,17 @@ export default function AssetList() {
   });
 
   const handleAllocationChange = async (assetId: number, newAllocation: number) => {
-    if (newAllocation < 0 || newAllocation > 100) {
+    const asset = assets.find(a => a.id === assetId);
+    if (!asset) return;
+
+    const otherAssets = assets.filter(a => a.id !== assetId);
+    const otherTotal = otherAssets.reduce((sum, a) => sum + Number(a.allocation), 0);
+    const newTotal = otherTotal + newAllocation;
+
+    if (newTotal > 100) {
       toast({
-        title: "Invalid allocation",
-        description: "Allocation must be between 0 and 100%",
+        title: "Error",
+        description: "Total allocation cannot exceed 100%",
         variant: "destructive",
       });
       return;
@@ -113,8 +111,8 @@ export default function AssetList() {
     return <AssetListSkeleton />;
   }
 
-  const sortedAssets = [...assets].sort((a, b) => b.value - a.value);
-  const totalAllocation = sortedAssets.reduce((sum, asset) => sum + asset.allocation, 0);
+  const sortedAssets = [...assets].sort((a, b) => Number(b.currentPrice) * b.allocation - Number(a.currentPrice) * a.allocation);
+  const totalAllocation = sortedAssets.reduce((sum, asset) => sum + Number(asset.allocation), 0);
 
   return (
     <Card>
@@ -141,20 +139,20 @@ export default function AssetList() {
                 </p>
                 <div className="flex items-center gap-2">
                   <Slider
-                    value={[asset.allocation]}
+                    value={[Number(asset.allocation)]}
                     onValueChange={([value]) => handleAllocationChange(asset.id, value)}
                     max={100}
                     step={0.1}
                     className="w-32"
                   />
                   <span className="text-sm text-muted-foreground">
-                    {asset.allocation.toFixed(2)}%
+                    {Number(asset.allocation).toFixed(2)}%
                   </span>
                 </div>
               </div>
               <div className="flex-1 text-right">
                 <p className="font-medium">
-                  ${((asset.currentPrice * asset.allocation) / 100).toLocaleString(undefined, {
+                  ${(Number(asset.currentPrice) * Number(asset.allocation) / 100).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}

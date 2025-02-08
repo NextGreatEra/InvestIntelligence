@@ -26,13 +26,16 @@ export default function AddAssetButton() {
     queryKey: ["/api/portfolio"],
   });
 
-  const totalCurrentAllocation = portfolio.reduce((sum, asset) => sum + asset.allocation, 0);
-  const remainingAllocation = 100 - totalCurrentAllocation;
+  const totalCurrentAllocation = portfolio.reduce(
+    (sum, asset) => sum + Number(asset.allocation), 
+    0
+  );
+  const remainingAllocation = Math.max(0, 100 - totalCurrentAllocation);
 
   const addAssetMutation = useMutation({
     mutationFn: async (asset: AssetSearchResult) => {
-      if (allocation <= 0) {
-        throw new Error("Please set an allocation percentage");
+      if (!allocation || allocation <= 0) {
+        throw new Error("Please set an allocation percentage greater than 0");
       }
 
       if (allocation > remainingAllocation) {
@@ -45,10 +48,10 @@ export default function AddAssetButton() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          symbol: asset.symbol,
+          symbol: asset.symbol.toUpperCase(),
           name: asset.name,
           currentPrice: asset.current_price,
-          allocation: allocation,
+          allocation: Number(allocation),
           type: 'crypto'
         }),
       });
@@ -84,6 +87,15 @@ export default function AddAssetButton() {
   };
 
   const handleAllocationChange = (value: number[]) => {
+    if (value[0] > remainingAllocation) {
+      toast({
+        title: "Warning",
+        description: `Cannot allocate more than the remaining ${remainingAllocation.toFixed(2)}%`,
+        variant: "destructive",
+      });
+      setAllocation(remainingAllocation);
+      return;
+    }
     setAllocation(value[0]);
   };
 
@@ -94,9 +106,9 @@ export default function AddAssetButton() {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
+      <Button onClick={() => setOpen(true)} disabled={remainingAllocation <= 0}>
         <Plus className="mr-2 h-4 w-4" />
-        Add Asset
+        Add Asset {remainingAllocation > 0 && `(${remainingAllocation.toFixed(2)}% remaining)`}
       </Button>
 
       <Dialog open={!!selectedAsset} onOpenChange={() => setSelectedAsset(null)}>
@@ -108,7 +120,7 @@ export default function AddAssetButton() {
             {selectedAsset && (
               <div>
                 <p className="text-sm font-medium mb-4">
-                  {selectedAsset.name} ({selectedAsset.symbol})
+                  {selectedAsset.name} ({selectedAsset.symbol.toUpperCase()})
                 </p>
                 <div className="space-y-4">
                   <div>
@@ -126,7 +138,11 @@ export default function AddAssetButton() {
                   <p className="text-sm text-muted-foreground">
                     Remaining allocation: {remainingAllocation.toFixed(2)}%
                   </p>
-                  <Button onClick={handleAddAsset} className="w-full">
+                  <Button 
+                    onClick={handleAddAsset} 
+                    className="w-full"
+                    disabled={allocation <= 0 || allocation > remainingAllocation}
+                  >
                     Add to Portfolio
                   </Button>
                 </div>
