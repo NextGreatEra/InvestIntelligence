@@ -286,10 +286,10 @@ export function registerRoutes(app: Express) {
 
       // Store current prices in history
       await Promise.all([
-        storage.addPriceHistory({ assetId: assetMap.get('BTC').id, price: btcPrice.price }),
-        storage.addPriceHistory({ assetId: assetMap.get('ETH').id, price: ethPrice.price }),
-        storage.addPriceHistory({ assetId: assetMap.get('SPY').id, price: spyPrice.price }),
-        storage.addPriceHistory({ assetId: assetMap.get('QQQ').id, price: qqqPrice.price })
+        storage.addPriceHistory({ assetId: assetMap.get('BTC').id, price: btcPrice }),
+        storage.addPriceHistory({ assetId: assetMap.get('ETH').id, price: ethPrice }),
+        storage.addPriceHistory({ assetId: assetMap.get('SPY').id, price: spyPrice }),
+        storage.addPriceHistory({ assetId: assetMap.get('QQQ').id, price: qqqPrice })
       ]);
 
       // Get 24h ago prices using asset IDs
@@ -302,10 +302,10 @@ export function registerRoutes(app: Express) {
 
       // Update current prices in assets table
       await Promise.all([
-        storage.updateAssetPrice(assetMap.get('BTC').id, btcPrice.price),
-        storage.updateAssetPrice(assetMap.get('ETH').id, ethPrice.price),
-        storage.updateAssetPrice(assetMap.get('SPY').id, spyPrice.price),
-        storage.updateAssetPrice(assetMap.get('QQQ').id, qqqPrice.price)
+        storage.updateAssetPrice(assetMap.get('BTC').id, btcPrice),
+        storage.updateAssetPrice(assetMap.get('ETH').id, ethPrice),
+        storage.updateAssetPrice(assetMap.get('SPY').id, spyPrice),
+        storage.updateAssetPrice(assetMap.get('QQQ').id, qqqPrice)
       ]);
 
       const markets = [
@@ -313,33 +313,33 @@ export function registerRoutes(app: Express) {
           id: 'bitcoin',
           symbol: 'BTC',
           name: 'Bitcoin',
-          current_price: btcPrice.price,
-          price_change_24h: btcPrice.price_change_24h,
-          price_change_percentage_24h: btcPrice.price_change_percentage_24h
+          current_price: btcPrice,
+          price_change_24h: btcHistory ? (btcPrice - btcHistory.price) : 0,
+          price_change_percentage_24h: btcHistory ? ((btcPrice - btcHistory.price) / btcHistory.price * 100) : 0
         },
         {
           id: 'ethereum',
           symbol: 'ETH',
           name: 'Ethereum',
-          current_price: ethPrice.price,
-          price_change_24h: ethPrice.price_change_24h,
-          price_change_percentage_24h: ethPrice.price_change_percentage_24h
+          current_price: ethPrice,
+          price_change_24h: ethHistory ? (ethPrice - ethHistory.price) : 0,
+          price_change_percentage_24h: ethHistory ? ((ethPrice - ethHistory.price) / ethHistory.price * 100) : 0
         },
         {
           id: 'sp500',
           symbol: 'SPY',
           name: 'S&P 500 ETF',
-          current_price: spyPrice.price,
-          price_change_24h: spyPrice.price_change_24h,
-          price_change_percentage_24h: spyPrice.price_change_percentage_24h
+          current_price: spyPrice,
+          price_change_24h: spyHistory ? (spyPrice - spyHistory.price) : 0,
+          price_change_percentage_24h: spyHistory ? ((spyPrice - spyHistory.price) / spyHistory.price * 100) : 0
         },
         {
           id: 'nasdaq',
           symbol: 'QQQ',
           name: 'Nasdaq-100 ETF',
-          current_price: qqqPrice.price,
-          price_change_24h: qqqPrice.price_change_24h,
-          price_change_percentage_24h: qqqPrice.price_change_percentage_24h
+          current_price: qqqPrice,
+          price_change_24h: qqqHistory ? (qqqPrice - qqqHistory.price) : 0,
+          price_change_percentage_24h: qqqHistory ? ((qqqPrice - qqqHistory.price) / qqqHistory.price * 100) : 0
         }
       ];
 
