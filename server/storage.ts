@@ -1,4 +1,4 @@
-import { Asset, InsertAsset, PortfolioItem, InsertPortfolioItem, PriceHistory, WatchlistItem, InsertWatchlistItem, priceHistory, assets, portfolioItems, watchlistItems } from "@shared/schema";
+import { Asset, InsertAsset, PortfolioItem, InsertPortfolioItem, PriceHistory, priceHistory, assets, portfolioItems } from "@shared/schema";
 import { db } from "./db";
 import { eq, or, ilike, and, lte, desc, asc, sql } from "drizzle-orm";
 
@@ -17,11 +17,6 @@ export interface IStorage {
   createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem>;
   updatePortfolioRank(id: number, newRank: number): Promise<PortfolioItem>;
   removePortfolioItem(id: number): Promise<void>;
-
-  getWatchlistItems(): Promise<WatchlistItem[]>;
-  getWatchlistItemsWithAssets(): Promise<(WatchlistItem & { asset: Asset })[]>;
-  createWatchlistItem(item: InsertWatchlistItem): Promise<WatchlistItem>;
-  removeWatchlistItem(id: number): Promise<void>;
 
   addPriceHistory(data: { assetId: number; price: number }): Promise<void>;
   getPriceHistory24h(assetSymbol: string): Promise<{ price: number } | null>;
@@ -184,38 +179,6 @@ export class DatabaseStorage implements IStorage {
       console.error('Error getting price history:', error);
       return null;
     }
-  }
-
-  async getWatchlistItems(): Promise<WatchlistItem[]> {
-    return await db.select().from(watchlistItems);
-  }
-
-  async getWatchlistItemsWithAssets(): Promise<(WatchlistItem & { asset: Asset })[]> {
-    const result = await db.select({
-      ...watchlistItems,
-      asset: assets
-    })
-    .from(watchlistItems)
-    .leftJoin(assets, eq(watchlistItems.assetId, assets.id));
-
-    return result.map(item => ({
-      ...item,
-      asset: item.asset
-    }));
-  }
-
-  async createWatchlistItem(insertItem: InsertWatchlistItem): Promise<WatchlistItem> {
-    const [item] = await db.insert(watchlistItems)
-      .values({
-        ...insertItem,
-        addedAt: new Date()
-      })
-      .returning();
-    return item;
-  }
-
-  async removeWatchlistItem(id: number): Promise<void> {
-    await db.delete(watchlistItems).where(eq(watchlistItems.id, id));
   }
 }
 

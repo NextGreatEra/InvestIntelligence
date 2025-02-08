@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, decimal, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, decimal, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -17,12 +17,6 @@ export const portfolioItems = pgTable("portfolio_items", {
   rank: integer("rank").notNull(),
   allocation: decimal("allocation", { precision: 10, scale: 2 }).notNull().default("0"),
   lastUpdated: timestamp("last_updated").notNull().defaultNow()
-});
-
-export const watchlistItems = pgTable("watchlist_items", {
-  id: serial("id").primaryKey(),
-  assetId: integer("asset_id").notNull(),
-  addedAt: timestamp("added_at").notNull().defaultNow()
 });
 
 export const priceHistory = pgTable("price_history", {
@@ -51,12 +45,6 @@ export const insertPortfolioItemSchema = createInsertSchema(portfolioItems)
     allocation: true
   });
 
-export const insertWatchlistItemSchema = createInsertSchema(watchlistItems)
-  .omit({
-    id: true,
-    addedAt: true
-  });
-
 export const insertPriceHistorySchema = createInsertSchema(priceHistory).omit({
   id: true,
   timestamp: true
@@ -66,7 +54,5 @@ export type Asset = typeof assets.$inferSelect;
 export type InsertAsset = z.infer<typeof insertAssetSchema>;
 export type PortfolioItem = typeof portfolioItems.$inferSelect;
 export type InsertPortfolioItem = z.infer<typeof insertPortfolioItemSchema>;
-export type WatchlistItem = typeof watchlistItems.$inferSelect;
-export type InsertWatchlistItem = z.infer<typeof insertWatchlistItemSchema>;
 export type PriceHistory = typeof priceHistory.$inferSelect;
 export type InsertPriceHistory = z.infer<typeof insertPriceHistorySchema>;
