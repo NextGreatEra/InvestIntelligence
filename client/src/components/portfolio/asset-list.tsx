@@ -11,6 +11,7 @@ interface AssetWithDetails extends Asset {
   rank: number;
   value: number;
   priceChange24h: number;
+  portfolioItemId: number; // Add this to track the portfolio item ID
 }
 
 export default function AssetList() {
@@ -20,8 +21,8 @@ export default function AssetList() {
   const { toast } = useToast();
 
   const removeAssetMutation = useMutation({
-    mutationFn: async (assetId: number) => {
-      const response = await fetch(`/api/portfolio/${assetId}`, {
+    mutationFn: async (portfolioItemId: number) => {
+      const response = await fetch(`/api/portfolio/${portfolioItemId}`, {
         method: "DELETE",
       });
 
@@ -47,9 +48,9 @@ export default function AssetList() {
     },
   });
 
-  const handleDelete = (assetId: number) => {
+  const handleDelete = (portfolioItemId: number) => {
     if (window.confirm('Are you sure you want to remove this asset?')) {
-      removeAssetMutation.mutate(assetId);
+      removeAssetMutation.mutate(portfolioItemId);
     }
   };
 
@@ -103,7 +104,7 @@ export default function AssetList() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDelete(asset.id)}
+                  onClick={() => handleDelete(asset.portfolioItemId)}
                 >
                   <Trash2Icon className="h-4 w-4" />
                 </Button>

@@ -99,6 +99,7 @@ export function registerRoutes(app: Express) {
 
           return {
             ...asset,
+            portfolioItemId: item.id, // Include the portfolio item ID
             rank: item.rank,
             value: Number(asset.currentPrice),
             priceChange24h
