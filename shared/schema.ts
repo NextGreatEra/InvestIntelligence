@@ -6,7 +6,7 @@ export const assets = pgTable("assets", {
   id: serial("id").primaryKey(),
   symbol: text("symbol").notNull(),
   name: text("name").notNull(),
-  type: text("type").notNull(), // 'stock' or 'crypto'
+  type: text("type").notNull(),
   currentPrice: decimal("current_price").notNull(),
   lastUpdated: timestamp("last_updated").notNull()
 });
@@ -26,16 +26,20 @@ export const priceHistory = pgTable("price_history", {
   timestamp: timestamp("timestamp").notNull().defaultNow()
 });
 
-export const insertAssetSchema = createInsertSchema(assets).omit({ 
-  id: true, 
-  lastUpdated: true 
-});
+export const insertAssetSchema = createInsertSchema(assets)
+  .extend({
+    currentPrice: z.number().transform(val => val.toString())
+  })
+  .omit({ 
+    id: true, 
+    lastUpdated: true 
+  });
 
 export const insertPortfolioItemSchema = createInsertSchema(portfolioItems)
   .omit({ 
     id: true,
     lastUpdated: true,
-    allocation: true // Make allocation optional by omitting it from the insert schema
+    allocation: true
   });
 
 export const insertPriceHistorySchema = createInsertSchema(priceHistory).omit({
@@ -49,9 +53,3 @@ export type PortfolioItem = typeof portfolioItems.$inferSelect;
 export type InsertPortfolioItem = z.infer<typeof insertPortfolioItemSchema>;
 export type PriceHistory = typeof priceHistory.$inferSelect;
 export type InsertPriceHistory = z.infer<typeof insertPriceHistorySchema>;
-
-export interface AssetWithDetails extends Asset {
-  rank: number;
-  value: number;
-  priceChange24h: number;
-}

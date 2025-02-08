@@ -32,20 +32,20 @@ export function registerRoutes(app: Express) {
   // Add portfolio item endpoint
   app.post('/api/portfolio', async (req, res) => {
     try {
-      // Parse and validate the asset data
       const assetData = insertAssetSchema.parse({
         symbol: req.body.symbol,
         name: req.body.name,
-        currentPrice: req.body.currentPrice,
+        currentPrice: req.body.current_price || req.body.currentPrice,
         type: req.body.type
       });
 
       // Create the asset first
       const asset = await storage.createAsset(assetData);
 
-      // Create the portfolio item
+      // Create the portfolio item with default rank
       const portfolioItem = await storage.createPortfolioItem({
-        assetId: asset.id
+        assetId: asset.id,
+        rank: 0
       });
 
       res.json(portfolioItem);
