@@ -15,7 +15,7 @@ export const portfolioItems = pgTable("portfolio_items", {
   id: serial("id").primaryKey(),
   assetId: integer("asset_id").notNull(),
   rank: integer("rank").notNull(),
-  allocation: decimal("allocation", { precision: 10, scale: 2 }).notNull(),
+  allocation: decimal("allocation", { precision: 10, scale: 2 }).notNull().default("0"),
   lastUpdated: timestamp("last_updated").notNull().defaultNow()
 });
 
@@ -31,10 +31,12 @@ export const insertAssetSchema = createInsertSchema(assets).omit({
   lastUpdated: true 
 });
 
-export const insertPortfolioItemSchema = createInsertSchema(portfolioItems).omit({ 
-  id: true,
-  lastUpdated: true
-});
+export const insertPortfolioItemSchema = createInsertSchema(portfolioItems)
+  .omit({ 
+    id: true,
+    lastUpdated: true,
+    allocation: true // Make allocation optional by omitting it from the insert schema
+  });
 
 export const insertPriceHistorySchema = createInsertSchema(priceHistory).omit({
   id: true,

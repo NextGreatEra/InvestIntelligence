@@ -15,7 +15,6 @@ export interface IStorage {
   getPortfolioItem(id: number): Promise<PortfolioItem | undefined>;
   createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem>;
   updatePortfolioRank(id: number, newRank: number): Promise<PortfolioItem>;
-  updatePortfolioAllocation(id: number, allocation: string): Promise<PortfolioItem>;
   removePortfolioItem(id: number): Promise<void>;
 
   addPriceHistory(data: { assetId: number; price: number }): Promise<void>;
@@ -50,7 +49,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAsset(insertAsset: InsertAsset): Promise<Asset> {
-    // Ensure price is properly formatted
     const formattedPrice = Number(insertAsset.currentPrice).toFixed(8);
     const [asset] = await db.insert(assets)
       .values({ 
@@ -63,7 +61,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateAssetPrice(id: number, price: number): Promise<Asset> {
-    const formattedPrice = price.toFixed(8); // Ensure consistent price format
+    const formattedPrice = price.toFixed(8);
     const [asset] = await db.update(assets)
       .set({ 
         currentPrice: formattedPrice,
@@ -102,6 +100,7 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...insertItem,
         rank: newRank,
+        allocation: "0", // Set a default allocation of 0
         lastUpdated: new Date()
       })
       .returning();
@@ -118,74 +117,8 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
-  async updatePortfolioAllocation(id: number, allocation: string): Promise<PortfolioItem> {
-    const [item] = await db.update(portfolioItems)
-      .set({ 
-        allocation,
-        lastUpdated: new Date()
-      })
-      .where(eq(portfolioItems.id, id))
-      .returning();
-
-    if (!item) throw new Error("Portfolio item not found");
-    return item;
-  }
-
   async removePortfolioItem(id: number): Promise<void> {
-    try {
-      // Get the item to be removed and its allocation
-      const [itemToRemove] = await db.select()
-        .from(portfolioItems)
-        .where(eq(portfolioItems.id, id));
-
-      if (!itemToRemove) {
-        throw new Error('Portfolio item not found');
-      }
-
-      console.log('Found item to remove:', itemToRemove);
-
-      // Get other portfolio items
-      const otherItems = await db.select()
-        .from(portfolioItems)
-        .where(sql`${portfolioItems.id} != ${id}`);
-
-      console.log('Other items count:', otherItems.length);
-
-      const removedAllocation = Number(itemToRemove.allocation);
-      const remainingItemCount = otherItems.length;
-
-      if (remainingItemCount > 0) {
-        // Redistribute the allocation among remaining items
-        const redistributedAmount = removedAllocation / remainingItemCount;
-
-        console.log('Redistributing allocation:', {
-          removedAllocation,
-          redistributedAmount,
-          remainingItemCount
-        });
-
-        for (const item of otherItems) {
-          const newAllocation = (Number(item.allocation) + redistributedAmount).toString();
-          console.log('Updating allocation for item:', {
-            itemId: item.id,
-            oldAllocation: item.allocation,
-            newAllocation
-          });
-
-          await this.updatePortfolioAllocation(item.id, newAllocation);
-        }
-      }
-
-      // Finally, remove the item
-      console.log('Executing delete query for item:', id);
-      await db.delete(portfolioItems)
-        .where(eq(portfolioItems.id, id));
-
-      console.log('Item deleted successfully');
-    } catch (error) {
-      console.error('Error in removePortfolioItem:', error);
-      throw error;
-    }
+    await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
   }
 
   async addPriceHistory(data: { assetId: number; price: number }): Promise<void> {
@@ -205,11 +138,9 @@ export class DatabaseStorage implements IStorage {
     try {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-      // First get the asset ID
       const asset = await this.getAssetBySymbol(assetSymbol);
       if (!asset) return null;
 
-      // Get the closest price point within the last 24 hours
       const [historicalPrice] = await db
         .select({
           price: priceHistory.price
