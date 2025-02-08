@@ -20,37 +20,51 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
     const data = await response.json();
     console.log('Raw search results:', data.result?.length || 0, 'items');
 
-    const filteredResults = (data.result || [])
+    // Handle empty results
+    if (!data.result || !Array.isArray(data.result)) {
+      console.log('No results found');
+      return [];
+    }
+
+    const filteredResults = data.result
       .filter((result: any) => {
-        // Get uppercase versions for case-insensitive comparison
-        const type = (result.type || '').toUpperCase();
-        const symbol = (result.symbol || '').toUpperCase();
-        const description = (result.description || '').toUpperCase();
-        const searchQuery = query.toUpperCase();
+        if (!result) return false;
 
-        // More permissive type check - accept any stock-like type
-        const isStockType = type.includes('STOCK') || 
-                           type.includes('EQS') || 
-                           type.includes('ETF') || 
-                           type.includes('ADR') ||
-                           type === 'COMMON';
-
-        // More lenient match criteria
-        const matchesSearch = symbol.includes(searchQuery) || 
-                            description.includes(searchQuery);
-
-        // Basic validation
-        const isValid = symbol && 
-                       description && 
-                       !symbol.includes('.') && // Exclude non-standard symbols
-                       isStockType &&
-                       matchesSearch;
-
-        if (!isValid) {
-          console.log(`Filtered out: ${symbol} (${type}) - ${description}`);
+        // Basic data validation
+        if (!result.symbol || !result.description) {
+          console.log('Filtered out: Missing symbol or description');
+          return false;
         }
 
-        return isValid;
+        const symbol = result.symbol.toUpperCase();
+        const description = result.description.toUpperCase();
+        const searchQuery = query.toUpperCase();
+        const type = (result.type || '').toUpperCase();
+
+        // Check for special cases first (known major stocks)
+        const majorStocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META'];
+        if (majorStocks.includes(symbol)) {
+          return true;
+        }
+
+        // More permissive type checking
+        const validTypes = ['STOCK', 'COMMON', 'EQS', 'ETF', 'ADR'];
+        const isValidType = validTypes.some(t => type.includes(t)) || type === '';
+
+        // More lenient search matching
+        const matchesSymbol = symbol.includes(searchQuery);
+        const matchesName = description.includes(searchQuery);
+
+        const shouldInclude = 
+          isValidType && 
+          !symbol.includes('.') && 
+          (matchesSymbol || matchesName);
+
+        if (!shouldInclude) {
+          console.log(`Filtered out ${symbol}: type=${type}, matches=${matchesSymbol || matchesName}`);
+        }
+
+        return shouldInclude;
       })
       .slice(0, 5);
 
@@ -60,6 +74,7 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
       return [];
     }
 
+    // Fetch prices for filtered results
     const resultsWithPrices = await Promise.all(
       filteredResults.map(async (result: any) => {
         try {
@@ -74,7 +89,7 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
           const priceData = await quote.json();
 
           if (typeof priceData.c !== 'number' || isNaN(priceData.c)) {
-            console.error(`Invalid price data for ${result.symbol}:`, priceData);
+            console.log(`Invalid price data for ${result.symbol}:`, priceData);
             return null;
           }
 
@@ -92,7 +107,7 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
     );
 
     const validResults = resultsWithPrices.filter((result): result is Partial<InsertAsset> => result !== null);
-    console.log(`Final results with prices: ${validResults.length} items`);
+    console.log(`Final results with prices:`, validResults);
     return validResults;
   } catch (error) {
     console.error('Finnhub search error:', error);
