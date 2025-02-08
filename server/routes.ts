@@ -19,6 +19,7 @@ export function registerRoutes(app: Express) {
     try {
       const { searchAssets } = await import('./lib/coinmarketcap');
       const results = await searchAssets(q);
+      res.setHeader('Content-Type', 'application/json');
       res.json(results);
     } catch (error) {
       console.error('Search error:', error);
