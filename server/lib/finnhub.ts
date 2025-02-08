@@ -47,9 +47,9 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
           return true;
         }
 
-        // For other stocks, use more lenient matching
-        const matchesSymbol = symbol.includes(searchQuery);
-        const matchesName = description.includes(searchQuery);
+        // For other stocks, use case-insensitive matching
+        const matchesSymbol = symbol.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesName = description.toLowerCase().includes(searchQuery.toLowerCase());
 
         // Log all potential matches for debugging
         if (matchesSymbol || matchesName) {
