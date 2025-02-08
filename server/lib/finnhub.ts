@@ -130,7 +130,7 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
   }
 }
 
-export async function getStockPrice(symbol: string): Promise<number> {
+export async function getStockPrice(symbol: string): Promise<{ price: number; priceChange: number }> {
   try {
     if (!process.env.FINNHUB_API_KEY) {
       throw new Error('Missing FINNHUB_API_KEY');
@@ -150,7 +150,13 @@ export async function getStockPrice(symbol: string): Promise<number> {
       throw new Error(`Invalid price data for ${symbol}`);
     }
 
-    return data.c;
+    // Calculate percentage change using current (c) and previous close (pc)
+    const priceChange = ((data.c - data.pc) / data.pc) * 100;
+
+    return {
+      price: data.c,
+      priceChange: priceChange
+    };
   } catch (error) {
     console.error('Finnhub price error:', error);
     throw error;

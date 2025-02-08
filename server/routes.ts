@@ -142,13 +142,13 @@ export function registerRoutes(app: Express) {
       const stockSymbols = ['SPY', 'QQQ'];
       const stockPrices = await Promise.all(
         stockSymbols.map(async symbol => {
-          const price = await getStockPrice(symbol);
+          const { price, priceChange } = await getStockPrice(symbol);
           return {
             id: symbol,
             symbol,
             name: symbol === 'SPY' ? 'S&P 500 ETF' : 'Nasdaq 100 ETF',
             current_price: price,
-            price_change_percentage_24h: 0 // Note: We would need additional API calls to get 24h change
+            price_change_percentage_24h: priceChange
           };
         })
       );
