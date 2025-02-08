@@ -32,18 +32,21 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
 
         const symbol = result.symbol.toLowerCase();
         const description = result.description.toLowerCase();
-        const searchQuery = query.toLowerCase();
+        const searchQuery = query.toLowerCase().trim();
 
         // Only include stocks from major US exchanges (no extension in symbol)
         if (symbol.includes('.')) return false;
 
-        // Match either symbol or company name
-        const matchesSymbol = symbol.includes(searchQuery);
-        const matchesName = description.includes(searchQuery);
-        const matchScore = (matchesSymbol ? 2 : 0) + (matchesName ? 1 : 0);
+        // Normalize the search terms
+        const searchTerms = searchQuery.split(/\s+/);
+        
+        // Check if all search terms are found in either symbol or description
+        const allTermsFound = searchTerms.every(term => 
+          symbol.includes(term) || description.includes(term)
+        );
 
-        if (matchScore > 0) {
-          console.log(`Match found: ${result.symbol} (${result.description}) - Score: ${matchScore}`);
+        if (allTermsFound) {
+          console.log(`Match found: ${result.symbol} (${result.description})`);
           return true;
         }
 
