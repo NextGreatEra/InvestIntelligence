@@ -313,33 +313,33 @@ export function registerRoutes(app: Express) {
           id: 'bitcoin',
           symbol: 'BTC',
           name: 'Bitcoin',
-          current_price: btcPrice,
-          price_change_24h: btcData?.price_change_24h || 0,
-          price_change_percentage_24h: btcData?.price_change_percentage_24h || 0
+          current_price: btcPrice.price,
+          price_change_24h: btcPrice.price_change_24h,
+          price_change_percentage_24h: btcPrice.price_change_percentage_24h
         },
         {
           id: 'ethereum',
           symbol: 'ETH',
           name: 'Ethereum',
-          current_price: ethPrice,
-          price_change_24h: ethData?.price_change_24h || 0,
-          price_change_percentage_24h: ethData?.price_change_percentage_24h || 0
+          current_price: ethPrice.price,
+          price_change_24h: ethPrice.price_change_24h,
+          price_change_percentage_24h: ethPrice.price_change_percentage_24h
         },
         {
           id: 'sp500',
           symbol: 'SPY',
           name: 'S&P 500 ETF',
-          current_price: spyPrice,
-          price_change_24h: spyHistory ? (spyPrice - spyHistory.price) : 0,
-          price_change_percentage_24h: spyHistory ? ((spyPrice - spyHistory.price) / spyHistory.price * 100) : 0
+          current_price: spyPrice.price,
+          price_change_24h: spyPrice.price_change_24h,
+          price_change_percentage_24h: spyPrice.price_change_percentage_24h
         },
         {
           id: 'nasdaq',
           symbol: 'QQQ',
           name: 'Nasdaq-100 ETF',
-          current_price: qqqPrice,
-          price_change_24h: qqqHistory ? (qqqPrice - qqqHistory.price) : 0,
-          price_change_percentage_24h: qqqHistory ? ((qqqPrice - qqqHistory.price) / qqqHistory.price * 100) : 0
+          current_price: qqqPrice.price,
+          price_change_24h: qqqPrice.price_change_24h,
+          price_change_percentage_24h: qqqPrice.price_change_percentage_24h
         }
       ];
 
