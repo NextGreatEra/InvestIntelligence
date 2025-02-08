@@ -212,12 +212,13 @@ export class DatabaseStorage implements IStorage {
       // Get the closest price point to 24 hours ago
       const [historicalPrice] = await db
         .select({
-          price: priceHistory.price,
-          timeDiff: sql<number>`ABS(EXTRACT(EPOCH FROM (${priceHistory.timestamp} - ${twentyFourHoursAgo})))`
+          price: priceHistory.price
         })
         .from(priceHistory)
         .where(eq(priceHistory.assetId, asset.id))
-        .orderBy(sql`timeDiff`)
+        .orderBy(
+          sql`ABS(EXTRACT(EPOCH FROM (${priceHistory.timestamp} - ${twentyFourHoursAgo})))`
+        )
         .limit(1);
 
       if (!historicalPrice) return null;
