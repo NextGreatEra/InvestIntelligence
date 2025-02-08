@@ -28,40 +28,33 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
 
     const filteredResults = data.result
       .filter((result: any) => {
-        if (!result) return false;
+        if (!result || !result.symbol || !result.description) return false;
 
-        // Basic data validation
-        if (!result.symbol || !result.description) {
-          console.log('Filtered out: Missing symbol or description');
-          return false;
-        }
+        const symbol = result.symbol.toLowerCase();
+        const description = result.description.toLowerCase();
+        const searchQuery = query.toLowerCase();
 
-        const symbol = result.symbol;
-        const description = result.description;
-        const searchQuery = query;
+        // Only include stocks from major US exchanges (no extension in symbol)
+        if (symbol.includes('.')) return false;
 
-        // Check for exact matches to major stock symbols first
-        const majorStocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META'];
-        if (majorStocks.includes(symbol.toUpperCase())) {
-          console.log(`Found major stock: ${symbol}`);
+        // Match either symbol or company name
+        const matchesSymbol = symbol.includes(searchQuery);
+        const matchesName = description.includes(searchQuery);
+        const matchScore = (matchesSymbol ? 2 : 0) + (matchesName ? 1 : 0);
+
+        if (matchScore > 0) {
+          console.log(`Match found: ${result.symbol} (${result.description}) - Score: ${matchScore}`);
           return true;
         }
 
-        // Only include stocks from major US exchanges (no extension in symbol)
-        if (symbol.includes('.')) {
-          return false;
-        }
-
-        // Use case-insensitive matching for both symbol and company name
-        const matchesSymbol = symbol.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesName = description.toLowerCase().includes(searchQuery.toLowerCase());
-
-        // Log all potential matches for debugging
-        if (matchesSymbol || matchesName) {
-          console.log(`Potential match: ${symbol} (${description})`);
-        }
-
-        return matchesSymbol || matchesName;
+        return false;
+      })
+      .sort((a: any, b: any) => {
+        const aScore = (a.symbol.toLowerCase().includes(query.toLowerCase()) ? 2 : 0) +
+                      (a.description.toLowerCase().includes(query.toLowerCase()) ? 1 : 0);
+        const bScore = (b.symbol.toLowerCase().includes(query.toLowerCase()) ? 2 : 0) +
+                      (b.description.toLowerCase().includes(query.toLowerCase()) ? 1 : 0);
+        return bScore - aScore;
       })
       .slice(0, 5);
 
