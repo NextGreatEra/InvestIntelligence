@@ -42,6 +42,7 @@ export default function Portfolio() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio/insight"] });
       setIsDialogOpen(false);
       setSelectedAsset(null);
       toast({

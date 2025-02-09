@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
@@ -10,7 +11,7 @@ interface InsightResponse {
 export default function AiInsights() {
   const { data: insight, isLoading } = useQuery<InsightResponse>({
     queryKey: ["/api/portfolio/insight"],
-    refetchInterval: 60000 // Refresh every minute
+    staleTime: Infinity // Prevents automatic refetching
   });
 
   return (
