@@ -110,12 +110,20 @@ export default function AssetList() {
     const currentItem = portfolioItems[currentIndex];
     const targetItem = portfolioItems[newIndex];
 
+    // Server expects 1-based ranks and only allows adjacent moves
+    const currentRank = currentItem.rank;
+    const targetRank = targetItem.rank;
+
+    // Verify ranks are adjacent before attempting move
+    if (Math.abs(currentRank - targetRank) !== 1) {
+      console.error('Can only move items between adjacent ranks');
+      return;
+    }
+
     try {
-      // Move to the next rank up or down
-      const newRank = direction === 'up' ? currentItem.rank - 1 : currentItem.rank + 1;
       await updateRankMutation.mutateAsync({
         id: currentItem.id,
-        newRank: newRank
+        newRank: targetRank // Use the target item's rank directly
       });
     } catch (error) {
       console.error('Error moving asset:', error);
