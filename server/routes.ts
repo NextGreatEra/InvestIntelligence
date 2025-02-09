@@ -163,7 +163,9 @@ export function registerRoutes(app: Express) {
           symbol: coin.symbol,
           name: coin.name,
           current_price: parseFloat(coin.price),
-          price_change_percentage_24h: coin.percentChange24h ? parseFloat(coin.percentChange24h) : null
+          percent_change_1h: coin.percentChange1h ? parseFloat(coin.percentChange1h) : null,
+          percent_change_24h: coin.percentChange24h ? parseFloat(coin.percentChange24h) : null,
+          percent_change_7d: coin.percentChange7d ? parseFloat(coin.percentChange7d) : null
         }));
 
       // Fetch stock data as before

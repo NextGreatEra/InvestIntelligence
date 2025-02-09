@@ -1,4 +1,4 @@
-
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowUpIcon, ArrowDownIcon, Loader2 } from "lucide-react";
@@ -8,10 +8,16 @@ interface MarketData {
   symbol: string;
   name: string;
   current_price: number;
-  price_change_percentage_24h: number;
+  percent_change_1h?: number | null;
+  percent_change_24h?: number | null;
+  percent_change_7d?: number | null;
 }
 
 export default function Markets() {
+  const [metricIndex, setMetricIndex] = useState(0);
+  const metrics = ['1h', '24h', '7d'];
+  const currentMetric = metrics[metricIndex];
+
   const { data: markets = [], isLoading } = useQuery<MarketData[]>({
     queryKey: ["/api/markets"],
     refetchInterval: 30000, // Refresh every 30 seconds
@@ -38,7 +44,20 @@ export default function Markets() {
   const cryptoMarkets = markets.filter(m => cryptoSymbols.includes(m.symbol));
   const stockMarkets = markets.filter(m => stockSymbols.includes(m.symbol));
 
-  const MarketSection = ({ title, data }: { title: string; data: MarketData[] }) => (
+  const getPercentChange = (market: MarketData) => {
+    switch(currentMetric) {
+      case '1h':
+        return market.percent_change_1h;
+      case '24h':
+        return market.percent_change_24h;
+      case '7d':
+        return market.percent_change_7d;
+      default:
+        return null;
+    }
+  };
+
+  const MarketSection = ({ title, data, showMetrics = false }: { title: string; data: MarketData[]; showMetrics?: boolean }) => (
     <div>
       <h3 className="font-medium mb-4">{title}</h3>
       <div className="space-y-4">
@@ -55,22 +74,54 @@ export default function Markets() {
               <p className="font-medium">
                 ${market.current_price.toLocaleString()}
               </p>
-              <div className="flex items-center gap-1">
-                {market.price_change_percentage_24h >= 0 ? (
-                  <ArrowUpIcon className="h-4 w-4 text-green-500" />
-                ) : (
-                  <ArrowDownIcon className="h-4 w-4 text-red-500" />
-                )}
-                <p
-                  className={
-                    market.price_change_percentage_24h >= 0
-                      ? "text-green-500"
-                      : "text-red-500"
-                  }
+              {showMetrics ? (
+                <button
+                  onClick={() => setMetricIndex((prev) => (prev + 1) % metrics.length)}
+                  className="flex items-center gap-1 hover:bg-accent px-2 py-1 rounded"
                 >
-                  {Math.abs(market.price_change_percentage_24h).toFixed(2)}%
-                </p>
-              </div>
+                  {getPercentChange(market) !== null ? (
+                    <>
+                      {getPercentChange(market)! >= 0 ? (
+                        <ArrowUpIcon className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <ArrowDownIcon className="h-4 w-4 text-red-500" />
+                      )}
+                      <p
+                        className={
+                          getPercentChange(market)! >= 0
+                            ? "text-green-500"
+                            : "text-red-500"
+                        }
+                      >
+                        {Math.abs(getPercentChange(market)!).toFixed(2)}% ({currentMetric})
+                      </p>
+                    </>
+                  ) : (
+                    <span className="text-muted">N/A ({currentMetric})</span>
+                  )}
+                </button>
+              ) : (
+                <div className="flex items-center gap-1">
+                  {market.percent_change_24h !== null && (
+                    <>
+                      {market.percent_change_24h >= 0 ? (
+                        <ArrowUpIcon className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <ArrowDownIcon className="h-4 w-4 text-red-500" />
+                      )}
+                      <p
+                        className={
+                          market.percent_change_24h >= 0
+                            ? "text-green-500"
+                            : "text-red-500"
+                        }
+                      >
+                        {Math.abs(market.percent_change_24h).toFixed(2)}%
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -84,7 +135,7 @@ export default function Markets() {
         <CardTitle>Markets</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <MarketSection title="Crypto" data={cryptoMarkets} />
+        <MarketSection title="Crypto" data={cryptoMarkets} showMetrics={true} />
         <MarketSection title="Stocks" data={stockMarkets} />
       </CardContent>
     </Card>
