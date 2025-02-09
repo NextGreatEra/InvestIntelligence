@@ -207,7 +207,6 @@ export class DatabaseStorage implements IStorage {
 
   async updatePortfolioRank(id: number, newRank: number): Promise<void> {
     await db.transaction(async (tx) => {
-      // fetch current ordering of portfolio items
       const items = await tx
         .select()
         .from(portfolioItems)
@@ -219,38 +218,31 @@ export class DatabaseStorage implements IStorage {
       }
 
       const currentItem = items.find(item => item.id === id);
-      if (!currentItem) {
-        throw new Error('item not found');
-      }
+      if (!currentItem) throw new Error('item not found');
 
       const currentRank = currentItem.rank;
-      if (newRank === currentRank) return; // nothing to change
+      if (newRank === currentRank) return;
 
       if (Math.abs(newRank - currentRank) !== 1) {
         throw new Error('only adjacent swaps allowed');
       }
 
       const targetItem = items.find(item => item.rank === newRank);
-      if (!targetItem) {
-        throw new Error('target item not found');
-      }
+      if (!targetItem) throw new Error('target item not found');
 
-      // if there's a unique constraint on rank, a direct swap may fail.
-      // so we assign a temporary rank (0) to avoid collision.
+      // swap ranks atomically with a single update using a case expression
       await tx
         .update(portfolioItems)
-        .set({ rank: 0, lastUpdated: new Date() })
-        .where(eq(portfolioItems.id, id));
-
-      await tx
-        .update(portfolioItems)
-        .set({ rank: currentRank, lastUpdated: new Date() })
-        .where(eq(portfolioItems.id, targetItem.id));
-
-      await tx
-        .update(portfolioItems)
-        .set({ rank: newRank, lastUpdated: new Date() })
-        .where(eq(portfolioItems.id, id));
+        .set({
+          rank: sql`case when id = ${id} then ${newRank} when id = ${targetItem.id} then ${currentRank} else rank end`,
+          lastUpdated: new Date()
+        })
+        .where(
+          or(
+            eq(portfolioItems.id, id),
+            eq(portfolioItems.id, targetItem.id)
+          )
+        );
     });
   }
 }
