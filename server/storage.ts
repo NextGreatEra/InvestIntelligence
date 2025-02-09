@@ -40,6 +40,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAsset(insertAsset: InsertAsset): Promise<Asset> {
+    // Check if asset with same cmcId exists
+    const [existingAsset] = await db.select()
+      .from(assets)
+      .where(eq(assets.cmcId, insertAsset.cmcId));
+
+    if (existingAsset) {
+      // Update existing asset
+      const [updated] = await db.update(assets)
+        .set({
+          ...insertAsset,
+          lastUpdated: new Date()
+        })
+        .where(eq(assets.cmcId, insertAsset.cmcId))
+        .returning();
+      return updated;
+    }
+
+    // Create new asset
     const [asset] = await db.insert(assets)
       .values({ 
         ...insertAsset,

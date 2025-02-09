@@ -1,7 +1,7 @@
 import { Express } from "express";
 import http from "http";
 import { storage } from "./storage";
-import { insertAssetSchema, insertPortfolioItemSchema } from "@shared/schema";
+import { insertAssetSchema } from "@shared/schema";
 import { searchStocks } from "./lib/finnhub";
 
 export function registerRoutes(app: Express) {
@@ -48,21 +48,22 @@ export function registerRoutes(app: Express) {
       // If type is not specified or is 'stock', search for stocks
       if (!type || type === 'stock') {
         const stockResults = await searchStocks(q);
-        console.log('Stock search results:', stockResults);
         results.push(...stockResults);
       }
 
-      // If type is not specified or is 'crypto', search for cryptocurrencies
+      // If type is not specified or is 'crypto', search in our database
       if (!type || type === 'crypto') {
-        const { searchAssets } = await import('./lib/coinmarketcap');
-        const cryptoResults = await searchAssets(q);
-        console.log('Crypto search results:', cryptoResults);
-        if (cryptoResults) {
-          results.push(...cryptoResults);
-        }
+        const cryptoResults = await storage.searchAssets(q);
+        const formattedCryptoResults = cryptoResults.map(asset => ({
+          id: asset.id.toString(),
+          symbol: asset.symbol,
+          name: asset.name,
+          current_price: parseFloat(asset.price),
+          type: 'crypto'
+        }));
+        results.push(...formattedCryptoResults);
       }
 
-      console.log('Final search results:', results);
       res.json(results);
     } catch (error) {
       console.error('Search error:', error);
@@ -120,8 +121,8 @@ export function registerRoutes(app: Express) {
         name: req.body.name,
         type: req.body.type,
         currentPrice: currentPrice.toString(),
-        priceChangePercentage24h: priceChangePercentage24h != null 
-          ? priceChangePercentage24h.toString() 
+        priceChangePercentage24h: priceChangePercentage24h != null
+          ? priceChangePercentage24h.toString()
           : null,
         lastUpdated: new Date()
       });
@@ -142,31 +143,29 @@ export function registerRoutes(app: Express) {
       res.json(portfolioItem);
     } catch (error) {
       console.error('Error adding portfolio item:', error);
-      res.status(400).json({ 
-        message: error instanceof Error ? error.message : 'Failed to add asset to portfolio' 
+      res.status(400).json({
+        message: error instanceof Error ? error.message : 'Failed to add asset to portfolio'
       });
     }
   });
 
   app.get('/api/markets', async (req, res) => {
     try {
-      const [{ refreshTopCoins }, { getStockPrice }] = await Promise.all([
-        import('./lib/coinmarketcap'),
-        import('./lib/finnhub')
-      ]);
-
-      const coins = await refreshTopCoins();
-      const cryptoMarkets = coins
+      // Fetch top crypto assets directly from storage
+      const assets = await storage.getAssets();
+      const cryptoMarkets = assets
         .filter(coin => ['BTC', 'ETH', 'LINK'].includes(coin.symbol))
         .map(coin => ({
           id: coin.id.toString(),
           symbol: coin.symbol,
           name: coin.name,
-          current_price: coin.quote.USD.price,
-          price_change_percentage_24h: coin.quote.USD.percent_change_24h
+          current_price: parseFloat(coin.price),
+          price_change_percentage_24h: coin.percentChange24h ? parseFloat(coin.percentChange24h) : null
         }));
 
+      // Fetch stock data as before
       const stockSymbols = ['SPY', 'QQQ'];
+      const { getStockPrice } = await import('./lib/finnhub');
       const stockPrices = await Promise.all(
         stockSymbols.map(async symbol => {
           const { price, priceChange } = await getStockPrice(symbol);
