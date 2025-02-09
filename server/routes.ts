@@ -15,7 +15,38 @@ export function registerRoutes(app: Express) {
   app.get('/api/portfolio', async (req, res) => {
     try {
       const portfolioItems = await storage.getPortfolioItemsWithAssets();
-      res.json(portfolioItems);
+      const enrichedItems = await Promise.all(
+        portfolioItems.map(async (item) => {
+          if (item.assetType === 'stock') {
+            const stock = await storage.getStockById(item.assetId);
+            return {
+              ...item,
+              asset: {
+                id: stock.id,
+                symbol: stock.symbol,
+                name: stock.description,
+                currentPrice: stock.c,
+                priceChangePercentage24h: stock.dp,
+                type: 'stock'
+              }
+            };
+          } else {
+            const asset = await storage.getAssetById(item.assetId);
+            return {
+              ...item,
+              asset: {
+                id: asset.id,
+                symbol: asset.symbol,
+                name: asset.name,
+                currentPrice: asset.price,
+                priceChangePercentage24h: asset.percentChange24h,
+                type: 'crypto'
+              }
+            };
+          }
+        })
+      );
+      res.json(enrichedItems);
     } catch (error) {
       console.error('Error fetching portfolio:', error);
       res.status(500).json({ message: 'Failed to fetch portfolio items' });
@@ -85,67 +116,68 @@ export function registerRoutes(app: Express) {
     try {
       console.log('Received portfolio item request:', req.body);
 
-      let currentPrice;
-      let priceChangePercentage24h;
+      const { symbol, name, type, currentPrice } = req.body;
 
-      // Determine type based on presence of id field (crypto) or not (stock)
-      const assetType = req.body.id ? 'crypto' : 'stock';
+      if (!symbol || !name || !type || !currentPrice) {
+        throw new Error('Missing required fields');
+      }
 
-      // Fetch fresh price data based on asset type
-      if (assetType === 'crypto') {
+      let asset;
+      if (type === 'crypto') {
+        // For crypto assets, use the assets table
         const { getPrice } = await import('./lib/coinmarketcap');
         try {
-          const quote = await getPrice(req.body.symbol);
+          const quote = await getPrice(symbol);
           if (!quote || typeof quote.price === 'undefined') {
             throw new Error('Failed to fetch crypto price');
           }
-          currentPrice = quote.price;
-          priceChangePercentage24h = quote.percent_change_24h;
+
+          asset = await storage.createAsset({
+            cmcId: parseInt(req.body.id), // This will be provided for crypto assets
+            symbol: symbol.toUpperCase(),
+            name: name,
+            price: quote.price.toString(),
+            percentChange24h: quote.percent_change_24h ? quote.percent_change_24h.toString() : null,
+            lastUpdated: new Date()
+          });
         } catch (error) {
           console.error('Error fetching crypto price:', error);
           throw new Error('Failed to fetch crypto price data');
         }
-      } else if (assetType === 'stock') {
+      } else if (type === 'stock') {
+        // For stock assets, use the stocks table
         const { getStockPrice } = await import('./lib/finnhub');
         try {
-          const { price, priceChange } = await getStockPrice(req.body.symbol);
+          const { price, priceChange } = await getStockPrice(symbol);
           if (!price) {
             throw new Error('Failed to fetch stock price');
           }
-          currentPrice = price;
-          priceChangePercentage24h = priceChange;
+
+          // Get or create stock record
+          const existingStock = await storage.getStockBySymbol(symbol);
+          if (existingStock) {
+            asset = existingStock;
+          } else {
+            asset = await storage.createStock({
+              symbol: symbol.toUpperCase(),
+              description: name,
+              c: price.toString(),
+              dp: priceChange ? priceChange.toString() : null
+            });
+          }
         } catch (error) {
           console.error('Error fetching stock price:', error);
           throw new Error('Failed to fetch stock price data');
         }
+      } else {
+        throw new Error('Invalid asset type');
       }
 
-      if (!currentPrice || isNaN(currentPrice)) {
-        throw new Error('Invalid price value');
-      }
-
-      // Validate and format the data
-      const assetData = insertAssetSchema.parse({
-        symbol: req.body.symbol.toUpperCase(),
-        name: req.body.name,
-        type: req.body.type,
-        currentPrice: currentPrice.toString(),
-        priceChangePercentage24h: priceChangePercentage24h != null
-          ? priceChangePercentage24h.toString()
-          : null,
-        lastUpdated: new Date()
-      });
-
-      console.log('Formatted asset data:', assetData);
-
-      // Create the asset
-      const asset = await storage.createAsset(assetData);
-      console.log('Asset created:', asset);
-
-      // Create the portfolio item
+      // Create the portfolio item with the asset type
       const portfolioItem = await storage.createPortfolioItem({
         assetId: asset.id,
-        rank: 0
+        rank: 0,
+        assetType: type
       });
 
       console.log('Portfolio item created:', portfolioItem);

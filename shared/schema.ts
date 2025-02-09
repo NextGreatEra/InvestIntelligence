@@ -41,7 +41,8 @@ export const portfolioItems = pgTable("portfolio_items", {
   assetId: integer("asset_id").notNull(),
   rank: integer("rank").notNull(),
   allocation: decimal("allocation", { precision: 10, scale: 2 }).notNull().default("0"),
-  lastUpdated: timestamp("last_updated").notNull().defaultNow()
+  lastUpdated: timestamp("last_updated").notNull().defaultNow(),
+  assetType: text("asset_type").notNull() // Add this new column to distinguish between 'crypto' and 'stock'
 });
 
 export const insertAssetSchema = createInsertSchema(assets).omit({ 

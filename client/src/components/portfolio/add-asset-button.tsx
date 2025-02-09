@@ -12,6 +12,7 @@ interface AssetSearchResult {
   name: string;
   current_price: number;
   price_change_percentage_24h?: number | null;
+  type: 'crypto' | 'stock';
 }
 
 export default function AddAssetButton() {
@@ -21,18 +22,19 @@ export default function AddAssetButton() {
 
   const addAssetMutation = useMutation({
     mutationFn: async (asset: AssetSearchResult) => {
-      console.log('Adding asset:', asset); // Debug log
+      console.log('Adding asset:', asset);
       const response = await fetch("/api/portfolio", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          id: asset.id,
-          symbol: asset.symbol.toUpperCase(),
+          id: asset.type === 'crypto' ? asset.id : undefined, 
+          symbol: asset.symbol,
           name: asset.name,
           currentPrice: asset.current_price,
-          priceChangePercentage24h: asset.price_change_percentage_24h
+          priceChangePercentage24h: asset.price_change_percentage_24h,
+          type: asset.type
         }),
       });
 
@@ -62,7 +64,15 @@ export default function AddAssetButton() {
   });
 
   const handleAssetSelect = (asset: AssetSearchResult) => {
-    console.log('Selected asset:', asset); // Debug log
+    console.log('Selected asset:', asset);
+    if (!asset.current_price) {
+      toast({
+        title: "Error",
+        description: "Price information is missing",
+        variant: "destructive",
+      });
+      return;
+    }
     addAssetMutation.mutate(asset);
   };
 
