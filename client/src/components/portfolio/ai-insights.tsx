@@ -71,13 +71,7 @@ export default function AiInsights() {
           <div className="space-y-4">
             <div className="space-y-2">
               <p className="text-lg font-medium">{insight?.message}</p>
-              <p className={`text-sm ${
-                insight?.sentiment === 'positive' ? 'text-green-500' :
-                insight?.sentiment === 'negative' ? 'text-red-500' :
-                'text-muted-foreground'
-              }`}>
-                Market Sentiment: {insight?.sentiment}
-              </p>
+              
             </div>
             {insight?.disclaimer && (
               <p className="text-xs text-muted-foreground mt-4 border-t pt-2">
