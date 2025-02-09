@@ -1,4 +1,4 @@
-import { Asset, InsertAsset, Stock, InsertStock, assets, stocks } from "@shared/schema";
+import { Asset, InsertAsset, Stock, InsertStock, assets, stocks, portfolioItems, PortfolioItem, InsertPortfolioItem } from "@shared/schema";
 import { db } from "./db";
 import { eq, or, ilike } from "drizzle-orm";
 
@@ -20,10 +20,18 @@ export interface IStorage {
   updateStock(symbol: string, price: number, percentChange: number | null): Promise<Stock>;
   searchStocks(query: string): Promise<Stock[]>;
   removeStock(id: number): Promise<void>;
+
+  // Portfolio methods
+  getPortfolioItemsWithAssets(): Promise<any[]>;
+  createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem>;
+  removePortfolioItem(id: number): Promise<void>;
+  updatePortfolioRank(id: number, rank: number): Promise<void>;
+  getStockById(id: number): Promise<Stock>;
+  getAssetById(id: number): Promise<Asset>;
 }
 
 export class DatabaseStorage implements IStorage {
-  // Asset methods remain unchanged
+  // Existing Asset methods remain unchanged
   async getAssets(): Promise<Asset[]> {
     return await db.select().from(assets);
   }
@@ -92,7 +100,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(assets).where(eq(assets.id, id));
   }
 
-  // New Stock methods
+  // Stock methods
   async getStocks(): Promise<Stock[]> {
     return await db.select().from(stocks);
   }
@@ -100,6 +108,18 @@ export class DatabaseStorage implements IStorage {
   async getStock(id: number): Promise<Stock | undefined> {
     const [stock] = await db.select().from(stocks).where(eq(stocks.id, id));
     return stock;
+  }
+
+  async getStockById(id: number): Promise<Stock> {
+    const stock = await this.getStock(id);
+    if (!stock) throw new Error(`Stock with id ${id} not found`);
+    return stock;
+  }
+
+  async getAssetById(id: number): Promise<Asset> {
+    const asset = await this.getAsset(id);
+    if (!asset) throw new Error(`Asset with id ${id} not found`);
+    return asset;
   }
 
   async getStockBySymbol(symbol: string): Promise<Stock | undefined> {
@@ -159,6 +179,31 @@ export class DatabaseStorage implements IStorage {
 
   async removeStock(id: number): Promise<void> {
     await db.delete(stocks).where(eq(stocks.id, id));
+  }
+
+  // Portfolio methods
+  async getPortfolioItemsWithAssets(): Promise<any[]> {
+    return await db.select().from(portfolioItems);
+  }
+
+  async createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem> {
+    const [portfolioItem] = await db.insert(portfolioItems)
+      .values({ 
+        ...item,
+        lastUpdated: new Date() 
+      })
+      .returning();
+    return portfolioItem;
+  }
+
+  async removePortfolioItem(id: number): Promise<void> {
+    await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
+  }
+
+  async updatePortfolioRank(id: number, rank: number): Promise<void> {
+    await db.update(portfolioItems)
+      .set({ rank, lastUpdated: new Date() })
+      .where(eq(portfolioItems.id, id));
   }
 }
 
