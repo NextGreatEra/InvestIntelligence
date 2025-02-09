@@ -1,6 +1,6 @@
 import { Asset, InsertAsset, Stock, InsertStock, assets, stocks, portfolioItems, PortfolioItem, InsertPortfolioItem } from "@shared/schema";
 import { db } from "./db";
-import { eq, or, ilike } from "drizzle-orm";
+import { eq, or, ilike, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Asset methods
@@ -230,19 +230,19 @@ export class DatabaseStorage implements IStorage {
         await tx
           .update(portfolioItems)
           .set({ 
-            rank: db.sql`${portfolioItems.rank} - 1`,
+            rank: sql`${portfolioItems.rank} - 1`,
             lastUpdated: new Date()
           })
-          .where(db.sql`rank > ${oldRank} AND rank <= ${newRank}`);
+          .where(sql`rank > ${oldRank} AND rank <= ${newRank}`);
       } else {
         // Moving up - shift items between new and old rank down by 1
         await tx
           .update(portfolioItems)
           .set({ 
-            rank: db.sql`${portfolioItems.rank} + 1`,
+            rank: sql`${portfolioItems.rank} + 1`,
             lastUpdated: new Date()
           })
-          .where(db.sql`rank >= ${newRank} AND rank < ${oldRank}`);
+          .where(sql`rank >= ${newRank} AND rank < ${oldRank}`);
       }
 
       // Update the target item's rank
