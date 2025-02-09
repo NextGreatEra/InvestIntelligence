@@ -188,13 +188,11 @@ export class DatabaseStorage implements IStorage {
     const existingItems = await db.select().from(portfolioItems);
     const totalItems = existingItems.length;
 
-    // New item gets lowest allocation initially
-    const allocation = totalItems === 0 ? 100 : Math.round(100 / (totalItems + 1));
-
+    // New item gets last rank
     const [portfolioItem] = await db.insert(portfolioItems)
       .values({ 
         ...item,
-        allocation: allocation.toString(),
+        allocation: (totalItems + 1).toString(), // Use allocation column to store rank
         lastUpdated: new Date() 
       })
       .returning();
@@ -206,20 +204,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePortfolioRank(id: number, rank: number): Promise<void> {
-    // Get total number of portfolio items to calculate allocation
-    const existingItems = await db.select().from(portfolioItems);
-    const totalItems = existingItems.length;
-
-    // Calculate allocation based on rank (higher rank = higher allocation)
-    // For example: rank 0 gets 100/(totalItems) * (totalItems) = 100%
-    //             rank 1 gets 100/(totalItems) * (totalItems-1)
-    const allocation = totalItems === 1 ? 100 : 
-      Math.round((totalItems - rank) * (100 / totalItems));
-
     await db.update(portfolioItems)
       .set({ 
         rank,
-        allocation: allocation.toString(),
+        allocation: (rank + 1).toString(), // Store rank number (1-based) in allocation
         lastUpdated: new Date() 
       })
       .where(eq(portfolioItems.id, id));
