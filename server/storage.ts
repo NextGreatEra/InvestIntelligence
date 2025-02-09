@@ -206,45 +206,46 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePortfolioRank(id: number, newRank: number): Promise<void> {
-    // Get all portfolio items ordered by rank
-    const items = await db.select()
-      .from(portfolioItems)
-      .orderBy(portfolioItems.rank);
-
-    // Find the item we're updating
-    const itemToUpdate = items.find(item => item.id === id);
-    if (!itemToUpdate) return;
-
-    const oldRank = itemToUpdate.rank;
-
-    // Ensure newRank is within valid bounds and only allow adjacent moves
-    if (newRank < 1 || newRank > items.length || Math.abs(newRank - oldRank) !== 1) {
-      return;
-    }
-
-    // Find the item we're swapping with
-    const itemToSwap = items.find(item => item.rank === newRank);
-    if (!itemToSwap) return;
-
-    // Begin transaction to ensure atomic updates
     await db.transaction(async (tx) => {
-      // Update the target item's rank
+      // fetch and lock all rows to ensure state sync
+      const items = await tx
+        .select()
+        .from(portfolioItems)
+        .orderBy(portfolioItems.rank)
+        .forUpdate(); // locks rows for this transaction
+
+      const totalItems = items.length;
+      if (newRank < 1 || newRank > totalItems) {
+        throw new Error('invalid rank: out of range');
+      }
+
+      const currentItem = items.find(item => item.id === id);
+      if (!currentItem) {
+        throw new Error('item not found');
+      }
+
+      const currentRank = currentItem.rank;
+      if (newRank === currentRank) return; // no change needed
+
+      if (Math.abs(newRank - currentRank) !== 1) {
+        throw new Error('only adjacent swaps allowed');
+      }
+
+      const targetItem = items.find(item => item.rank === newRank);
+      if (!targetItem) {
+        throw new Error('target item not found');
+      }
+
+      // swap the ranks
       await tx
         .update(portfolioItems)
-        .set({ 
-          rank: newRank,
-          lastUpdated: new Date()
-        })
+        .set({ rank: newRank, lastUpdated: new Date() })
         .where(eq(portfolioItems.id, id));
 
-      // Update the swapped item's rank
       await tx
         .update(portfolioItems)
-        .set({ 
-          rank: oldRank,
-          lastUpdated: new Date()
-        })
-        .where(eq(portfolioItems.id, itemToSwap.id));
+        .set({ rank: currentRank, lastUpdated: new Date() })
+        .where(eq(portfolioItems.id, targetItem.id));
     });
   }
 }
