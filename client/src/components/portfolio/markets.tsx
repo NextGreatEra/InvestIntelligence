@@ -39,7 +39,7 @@ export default function Markets() {
     );
   }
 
-  const cryptoSymbols = ['BTC', 'ETH'];
+  const cryptoSymbols = ['ETH', 'BTC'];
   const stockSymbols = ['SPY', 'QQQ'];
 
   const cryptoMarkets = markets.filter(m => cryptoSymbols.includes(m.symbol));
