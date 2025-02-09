@@ -4,13 +4,15 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, Command
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Asset } from "@shared/schema";
 
 interface AssetSearchResult {
   id: string;
   symbol: string;
   name: string;
   current_price: number;
+  percent_change_1h?: number;
+  percent_change_24h?: number;
+  percent_change_7d?: number;
 }
 
 interface AssetSearchProps {
@@ -21,7 +23,11 @@ interface AssetSearchProps {
 
 const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
   const [search, setSearch] = useState("");
+  const [metricIndex, setMetricIndex] = useState(0);
   const { toast } = useToast();
+
+  const metrics = ['1h', '24h', '7d'];
+  const currentMetric = metrics[metricIndex];
 
   const { data: results = [], isLoading } = useQuery<AssetSearchResult[]>({
     queryKey: ["/api/assets/search", search],
@@ -51,6 +57,23 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
       }
     }
   });
+
+  const handleMetricClick = useCallback(() => {
+    setMetricIndex((prev) => (prev + 1) % metrics.length);
+  }, []);
+
+  const getPercentChange = (asset: AssetSearchResult) => {
+    switch(currentMetric) {
+      case '1h':
+        return asset.percent_change_1h;
+      case '24h':
+        return asset.percent_change_24h;
+      case '7d':
+        return asset.percent_change_7d;
+      default:
+        return null;
+    }
+  };
 
   const handleSelect = useCallback((asset: AssetSearchResult) => {
     if (!asset.current_price) {
@@ -113,9 +136,30 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
                         <span className="font-medium">{asset.symbol.toUpperCase()}</span>
                         <span className="ml-2 text-muted-foreground">{asset.name}</span>
                       </div>
-                      <span className="text-sm">
-                        ${typeof asset.current_price === 'number' ? asset.current_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'N/A'}
-                      </span>
+                      <div className="flex items-center space-x-4">
+                        <span className="text-sm">
+                          ${typeof asset.current_price === 'number' ? 
+                            asset.current_price.toLocaleString('en-US', { 
+                              minimumFractionDigits: 2, 
+                              maximumFractionDigits: 2 
+                            }) : 'N/A'}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMetricClick();
+                          }}
+                          className="px-2 py-1 text-xs rounded hover:bg-accent"
+                        >
+                          {getPercentChange(asset) !== null ? (
+                            <span className={getPercentChange(asset)! >= 0 ? "text-green-500" : "text-red-500"}>
+                              {getPercentChange(asset)!.toFixed(2)}% ({currentMetric})
+                            </span>
+                          ) : (
+                            <span className="text-muted">N/A ({currentMetric})</span>
+                          )}
+                        </button>
+                      </div>
                     </CommandItem>
                   ))}
                 </CommandGroup>

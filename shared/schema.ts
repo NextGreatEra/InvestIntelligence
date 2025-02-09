@@ -1,3 +1,4 @@
+
 import { pgTable, text, serial, integer, decimal, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -27,10 +28,26 @@ export const assets = pgTable("assets", {
   fullyDilutedMarketCap: decimal("fully_diluted_market_cap", { precision: 30, scale: 8 })
 });
 
+export const portfolioItems = pgTable("portfolio_items", {
+  id: serial("id").primaryKey(),
+  assetId: integer("asset_id").notNull(),
+  rank: integer("rank").notNull(),
+  allocation: decimal("allocation", { precision: 10, scale: 2 }).notNull().default("0"),
+  lastUpdated: timestamp("last_updated").notNull().defaultNow()
+});
+
 export const insertAssetSchema = createInsertSchema(assets).omit({ 
   id: true,
   lastUpdated: true 
 });
 
+export const insertPortfolioItemSchema = createInsertSchema(portfolioItems).omit({ 
+  id: true,
+  lastUpdated: true,
+  allocation: true
+});
+
 export type Asset = typeof assets.$inferSelect;
 export type InsertAsset = z.infer<typeof insertAssetSchema>;
+export type PortfolioItem = typeof portfolioItems.$inferSelect;
+export type InsertPortfolioItem = z.infer<typeof insertPortfolioItemSchema>;

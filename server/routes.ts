@@ -59,6 +59,9 @@ export function registerRoutes(app: Express) {
           symbol: asset.symbol,
           name: asset.name,
           current_price: parseFloat(asset.price),
+          percent_change_1h: asset.percentChange1h ? parseFloat(asset.percentChange1h) : null,
+          percent_change_24h: asset.percentChange24h ? parseFloat(asset.percentChange24h) : null,
+          percent_change_7d: asset.percentChange7d ? parseFloat(asset.percentChange7d) : null,
           type: 'crypto'
         }));
         results.push(...formattedCryptoResults);
