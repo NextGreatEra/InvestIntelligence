@@ -38,7 +38,9 @@ export function registerRoutes(app: Express) {
                 symbol: asset.symbol,
                 name: asset.name,
                 currentPrice: asset.price,
-                priceChangePercentage24h: asset.percentChange24h,
+                percent_change_1h: asset.percentChange1h,
+                percent_change_24h: asset.percentChange24h,
+                percent_change_7d: asset.percentChange7d,
                 type: 'crypto'
               }
             };

@@ -13,6 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useState } from "react";
 
 interface PortfolioItem {
   id: number;
@@ -24,12 +25,19 @@ interface PortfolioItem {
     symbol: string;
     name: string;
     currentPrice: string;
-    priceChangePercentage24h: string | null;
+    priceChangePercentage24h?: string | null;
+    percent_change_1h?: string | null;
+    percent_change_24h?: string | null;
+    percent_change_7d?: string | null;
     type: 'stock' | 'crypto';
   };
 }
 
 export default function AssetList() {
+  const [metricIndex, setMetricIndex] = useState(0);
+  const metrics = ['1h', '24h', '7d'];
+  const currentMetric = metrics[metricIndex];
+
   const { data: portfolioItems = [], isLoading } = useQuery<PortfolioItem[]>({
     queryKey: ["/api/portfolio"],
   });
@@ -106,6 +114,27 @@ export default function AssetList() {
     updateRankMutation.mutate({ id: targetItem.id, newRank: currentItem.rank });
   };
 
+  const handleMetricClick = () => {
+    setMetricIndex((prev) => (prev + 1) % metrics.length);
+  };
+
+  const getPercentChange = (asset: PortfolioItem['asset']) => {
+    if (asset.type === 'stock') {
+      return asset.priceChangePercentage24h ? parseFloat(asset.priceChangePercentage24h) : null;
+    }
+
+    switch(currentMetric) {
+      case '1h':
+        return asset.percent_change_1h ? parseFloat(asset.percent_change_1h) : null;
+      case '24h':
+        return asset.percent_change_24h ? parseFloat(asset.percent_change_24h) : null;
+      case '7d':
+        return asset.percent_change_7d ? parseFloat(asset.percent_change_7d) : null;
+      default:
+        return null;
+    }
+  };
+
   if (isLoading) {
     return <AssetListSkeleton />;
   }
@@ -127,9 +156,7 @@ export default function AssetList() {
             const allocation = totalItems === 1 ? 100 :
               Math.round((totalItems - index) * (100 / totalItems));
 
-            const priceChange = item.asset.priceChangePercentage24h 
-              ? Number(item.asset.priceChangePercentage24h)
-              : null;
+            const priceChange = getPercentChange(item.asset);
 
             return (
               <div
@@ -197,10 +224,16 @@ export default function AssetList() {
                       })}
                     </p>
                     {priceChange !== null && (
-                      <p className={`text-sm ${priceChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      <button
+                        onClick={item.asset.type === 'crypto' ? handleMetricClick : undefined}
+                        className={`text-sm ${priceChange >= 0 ? 'text-green-500' : 'text-red-500'} ${
+                          item.asset.type === 'crypto' ? 'hover:underline cursor-pointer' : ''
+                        }`}
+                      >
                         {priceChange >= 0 ? '+' : ''}
                         {priceChange.toFixed(2)}%
-                      </p>
+                        {item.asset.type === 'crypto' && ` (${currentMetric})`}
+                      </button>
                     )}
                   </div>
                   <Button
