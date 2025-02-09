@@ -216,15 +216,18 @@ export class DatabaseStorage implements IStorage {
     if (!itemToUpdate) return;
 
     const oldRank = itemToUpdate.rank;
-    
+
+    // Ensure newRank is never less than 1 or greater than total items
+    newRank = Math.max(1, Math.min(newRank, items.length));
+
     // If ranks are the same, no need to update
     if (oldRank === newRank) return;
 
-    // Update ranks for other items
+    // Update ranks for affected items
     if (oldRank < newRank) {
-      // Moving down - decrease ranks of items between old and new
-      await Promise.all(items.map(async (item) => {
-        if (item.rank > oldRank && item.rank <= newRank && item.id !== id) {
+      // Moving down - shift items up
+      for (const item of items) {
+        if (item.rank > oldRank && item.rank <= newRank) {
           await db.update(portfolioItems)
             .set({ 
               rank: item.rank - 1,
@@ -232,11 +235,11 @@ export class DatabaseStorage implements IStorage {
             })
             .where(eq(portfolioItems.id, item.id));
         }
-      }));
+      }
     } else {
-      // Moving up - increase ranks of items between new and old
-      await Promise.all(items.map(async (item) => {
-        if (item.rank >= newRank && item.rank < oldRank && item.id !== id) {
+      // Moving up - shift items down
+      for (const item of items) {
+        if (item.rank >= newRank && item.rank < oldRank) {
           await db.update(portfolioItems)
             .set({ 
               rank: item.rank + 1,
@@ -244,10 +247,10 @@ export class DatabaseStorage implements IStorage {
             })
             .where(eq(portfolioItems.id, item.id));
         }
-      }));
+      }
     }
 
-    // Update the moved item's rank
+    // Update the target item's rank
     await db.update(portfolioItems)
       .set({ 
         rank: newRank,
