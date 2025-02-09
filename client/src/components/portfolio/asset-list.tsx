@@ -111,10 +111,11 @@ export default function AssetList() {
     const targetItem = portfolioItems[newIndex];
 
     try {
-      // Simply update to the target rank - backend will handle reordering
+      // Move to the next rank up or down
+      const newRank = direction === 'up' ? currentItem.rank - 1 : currentItem.rank + 1;
       await updateRankMutation.mutateAsync({
         id: currentItem.id,
-        newRank: targetItem.rank + (direction === 'up' ? 0 : 1) //Corrected this line
+        newRank: newRank
       });
     } catch (error) {
       console.error('Error moving asset:', error);
