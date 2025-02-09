@@ -103,15 +103,16 @@ export default function AssetList() {
     }
   };
 
-  const moveAsset = (currentIndex: number, direction: 'up' | 'down') => {
+  const moveAsset = async (currentIndex: number, direction: 'up' | 'down') => {
     const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
     if (newIndex < 0 || newIndex >= portfolioItems.length) return;
 
     const currentItem = portfolioItems[currentIndex];
     const targetItem = portfolioItems[newIndex];
 
-    updateRankMutation.mutate({ id: currentItem.id, newRank: targetItem.rank });
-    updateRankMutation.mutate({ id: targetItem.id, newRank: currentItem.rank });
+    // First swap the target item to avoid rank conflict
+    await updateRankMutation.mutateAsync({ id: targetItem.id, newRank: currentItem.rank });
+    await updateRankMutation.mutateAsync({ id: currentItem.id, newRank: targetItem.rank });
   };
 
   const handleMetricClick = () => {
