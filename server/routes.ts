@@ -182,6 +182,10 @@ export function registerRoutes(app: Express) {
       const assets = await storage.getAssets();
       const cryptoMarkets = assets
         .filter(coin => ['BTC', 'ETH', 'LINK'].includes(coin.symbol))
+        // Add distinct check to prevent duplicates
+        .filter((coin, index, self) =>
+          index === self.findIndex((t) => t.symbol === coin.symbol)
+        )
         .map(coin => ({
           id: coin.id.toString(),
           symbol: coin.symbol,
@@ -193,19 +197,16 @@ export function registerRoutes(app: Express) {
           type: 'crypto'
         }));
 
-      // Fetch stock data from our database
       const stockSymbols = ['SPY', 'QQQ'];
       const stockData = await Promise.all(
         stockSymbols.map(async symbol => {
           let stock = await storage.getStockBySymbol(symbol);
 
-          // If stock is missing or has no price data, fetch it from Finnhub (This part remains as is because it handles cases where data might be missing)
           if (!stock || !stock.c || !stock.dp) {
             console.log(`Fetching fresh data for ${symbol} from Finnhub`);
             const { getStockPrice } = await import('./lib/finnhub');
             try {
               const { price, priceChange } = await getStockPrice(symbol);
-              // This will create or update the stock in our database
               stock = await storage.createStock({
                 symbol,
                 description: symbol === 'SPY' ? 'S&P 500 ETF' : 'Nasdaq 100 ETF',
