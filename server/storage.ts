@@ -207,7 +207,7 @@ export class DatabaseStorage implements IStorage {
 
   async updatePortfolioRank(id: number, newRank: number): Promise<void> {
     await db.transaction(async (tx) => {
-      // fetch all items in current order
+      // fetch current ordering of portfolio items
       const items = await tx
         .select()
         .from(portfolioItems)
@@ -224,7 +224,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       const currentRank = currentItem.rank;
-      if (newRank === currentRank) return; // no change needed
+      if (newRank === currentRank) return; // nothing to change
 
       if (Math.abs(newRank - currentRank) !== 1) {
         throw new Error('only adjacent swaps allowed');
@@ -235,16 +235,22 @@ export class DatabaseStorage implements IStorage {
         throw new Error('target item not found');
       }
 
-      // swap the ranks within the transaction for atomicity
+      // if there's a unique constraint on rank, a direct swap may fail.
+      // so we assign a temporary rank (0) to avoid collision.
       await tx
         .update(portfolioItems)
-        .set({ rank: newRank, lastUpdated: new Date() })
+        .set({ rank: 0, lastUpdated: new Date() })
         .where(eq(portfolioItems.id, id));
 
       await tx
         .update(portfolioItems)
         .set({ rank: currentRank, lastUpdated: new Date() })
         .where(eq(portfolioItems.id, targetItem.id));
+
+      await tx
+        .update(portfolioItems)
+        .set({ rank: newRank, lastUpdated: new Date() })
+        .where(eq(portfolioItems.id, id));
     });
   }
 }
