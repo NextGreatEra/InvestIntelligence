@@ -1,6 +1,6 @@
 import { storage } from "../storage";
 import fetch from 'node-fetch';
-import type { Asset, InsertAsset } from "@shared/schema";
+import type { InsertAsset } from "@shared/schema";
 
 const CMC_API = "https://pro-api.coinmarketcap.com/v1";
 
@@ -17,23 +17,23 @@ interface CryptoListingData {
   name: string;
   symbol: string;
   cmc_rank: number;
-  circulating_supply: number;
-  total_supply: number;
+  circulating_supply: number | null;
+  total_supply: number | null;
   max_supply: number | null;
   infinite_supply: boolean;
-  date_added: string;
   last_updated: string;
+  date_added: string;
   quote: {
     USD: {
       price: number;
       volume_24h: number;
       volume_change_24h: number;
-      percent_change_1h: number;
-      percent_change_24h: number;
-      percent_change_7d: number;
+      percent_change_1h: number | null;
+      percent_change_24h: number | null;
+      percent_change_7d: number | null;
       market_cap: number;
-      market_cap_dominance: number;
-      fully_diluted_market_cap: number;
+      market_cap_dominance: number | null;
+      fully_diluted_market_cap: number | null;
       last_updated: string;
     };
   };
@@ -45,7 +45,7 @@ export async function initializeCryptoAssets() {
     throw new Error('Missing COINMARKETCAP_API_KEY');
   }
 
-  // First fetch the cryptocurrency map
+  // Fetch the cryptocurrency map
   console.log('Fetching cryptocurrency map...');
   const mapResponse = await fetch(
     `${CMC_API}/cryptocurrency/map`,
@@ -63,15 +63,12 @@ export async function initializeCryptoAssets() {
   const mapData = await mapResponse.json();
   const cryptoMap = new Map(
     mapData.data.map((coin: CryptoMapData) => [coin.id, {
-      cmcId: coin.id,
-      name: coin.name,
-      symbol: coin.symbol,
-      firstHistoricalData: coin.first_historical_data,
-      lastHistoricalData: coin.last_historical_data
+      firstHistoricalData: new Date(coin.first_historical_data),
+      lastHistoricalData: new Date(coin.last_historical_data)
     }])
   );
 
-  // Then fetch the latest listings
+  // Fetch the latest listings
   console.log('Fetching latest cryptocurrency data...');
   const listingsResponse = await fetch(
     `${CMC_API}/cryptocurrency/listings/latest?limit=200`,
@@ -99,22 +96,23 @@ export async function initializeCryptoAssets() {
       symbol: coin.symbol,
       name: coin.name,
       cmcRank: coin.cmc_rank,
-      circulatingSupply: coin.circulating_supply?.toString(),
-      totalSupply: coin.total_supply?.toString(),
-      maxSupply: coin.max_supply?.toString(),
+      circulatingSupply: coin.circulating_supply?.toString() || null,
+      totalSupply: coin.total_supply?.toString() || null,
+      maxSupply: coin.max_supply?.toString() || null,
       infiniteSupply: coin.infinite_supply,
-      firstHistoricalData: new Date(mapInfo.firstHistoricalData),
-      lastHistoricalData: new Date(mapInfo.lastHistoricalData),
+      firstHistoricalData: mapInfo.firstHistoricalData,
+      lastHistoricalData: mapInfo.lastHistoricalData,
       dateAdded: new Date(coin.date_added),
       price: coin.quote.USD.price.toString(),
       volume24h: coin.quote.USD.volume_24h.toString(),
-      volumeChange24h: coin.quote.USD.volume_change_24h?.toString(),
-      percentChange1h: coin.quote.USD.percent_change_1h?.toString(),
-      percentChange24h: coin.quote.USD.percent_change_24h?.toString(),
-      percentChange7d: coin.quote.USD.percent_change_7d?.toString(),
+      volumeChange24h: coin.quote.USD.volume_change_24h?.toString() || null,
+      percentChange1h: coin.quote.USD.percent_change_1h?.toString() || null,
+      percentChange24h: coin.quote.USD.percent_change_24h?.toString() || null,
+      percentChange7d: coin.quote.USD.percent_change_7d?.toString() || null,
       marketCap: coin.quote.USD.market_cap.toString(),
-      marketCapDominance: coin.quote.USD.market_cap_dominance?.toString(),
-      fullyDilutedMarketCap: coin.quote.USD.fully_diluted_market_cap?.toString()
+      marketCapDominance: coin.quote.USD.market_cap_dominance?.toString() || null,
+      fullyDilutedMarketCap: coin.quote.USD.fully_diluted_market_cap?.toString() || null,
+      lastUpdated: new Date(coin.last_updated)
     };
 
     await storage.createAsset(asset);
@@ -125,7 +123,7 @@ export async function initializeCryptoAssets() {
 
 export async function refreshTopCoins() {
   await initializeCryptoAssets();
-  return storage.getAssets();
+  return await storage.getAssets();
 }
 
 export async function searchAssets(query: string) {

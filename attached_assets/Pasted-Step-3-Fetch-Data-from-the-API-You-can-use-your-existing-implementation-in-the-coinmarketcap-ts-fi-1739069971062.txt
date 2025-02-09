@@ -1,0 +1,97 @@
+Step 3: Fetch Data from the API
+You can use your existing implementation in the coinmarketcap.ts file to fetch the data. The method initializeCryptoAssets can be used with modifications to process and save only the required fields:
+
+Here is a function that replaces the existing initializeCryptoAssets method in your coinmarketcap.ts:
+
+import { storage } from "../storage";
+import fetch from 'node-fetch';
+import type { InsertAsset } from "@shared/schema";
+const CMC_API = "https://pro-api.coinmarketcap.com/v1";
+interface CryptoMapData {
+  id: number;
+  name: string;
+  symbol: string;
+  first_historical_data: string;
+  last_historical_data: string;
+}
+interface CryptoListingData {
+  id: number;
+  name: string;
+  symbol: string;
+  cmc_rank: number;
+  circulating_supply: number | null;
+  total_supply: number | null;
+  max_supply: number | null;
+  infinite_supply: boolean;
+  last_updated: string;
+  date_added: string;
+  quote: {
+    USD: {
+      price: number;
+      volume_24h: number;
+      volume_change_24h: number;
+      percent_change_1h: number | null;
+      percent_change_24h: number | null;
+      percent_change_7d: number | null;
+      market_cap: number;
+      market_cap_dominance: number | null;
+      fully_diluted_market_cap: number | null;
+      last_updated: string;
+    };
+  };
+}
+export async function initializeCryptoAssets() {
+  const apiKey = process.env.COINMARKETCAP_API_KEY;
+  if (!apiKey) {
+    throw new Error('Missing COINMARKETCAP_API_KEY');
+  }
+  // Fetch the cryptocurrency map
+  const mapResponse = await fetch(`${CMC_API}/cryptocurrency/map`, {
+    headers: { 'X-CMC_PRO_API_KEY': apiKey }
+  });
+  const mapData = await mapResponse.json();
+  
+  // Fetch the latest listings
+  const listingsResponse = await fetch(`${CMC_API}/cryptocurrency/listings/latest?limit=200`, {
+    headers: { 'X-CMC_PRO_API_KEY': apiKey }
+  });
+  const listingsData = await listingsResponse.json();
+  const cryptoMap = new Map(
+    mapData.data.map((coin: CryptoMapData) => [coin.id, {
+      cmcId: coin.id,
+      name: coin.name,
+      symbol: coin.symbol,
+      firstHistoricalData: new Date(coin.first_historical_data),
+      lastHistoricalData: new Date(coin.last_historical_data)
+    }])
+  );
+  for (const coin of listingsData.data as CryptoListingData[]) {
+    const mapInfo = cryptoMap.get(coin.id);
+    if (!mapInfo) continue;
+    const asset: InsertAsset = {
+      cmcId: coin.id,
+      symbol: coin.symbol,
+      name: coin.name,
+      cmcRank: coin.cmc_rank,
+      circulatingSupply: coin.circulating_supply ? coin.circulating_supply.toString() : null,
+      totalSupply: coin.total_supply ? coin.total_supply.toString() : null,
+      maxSupply: coin.max_supply ? coin.max_supply.toString() : null,
+      infiniteSupply: coin.infinite_supply,
+      firstHistoricalData: mapInfo.firstHistoricalData,
+      lastHistoricalData: mapInfo.lastHistoricalData,
+      dateAdded: new Date(coin.date_added),
+      price: coin.quote.USD.price.toString(),
+      volume24h: coin.quote.USD.volume_24h.toString(),
+      volumeChange24h: coin.quote.USD.volume_change_24h ? coin.quote.USD.volume_change_24h.toString() : null,
+      percentChange1h: coin.quote.USD.percent_change_1h ? coin.quote.USD.percent_change_1h.toString() : null,
+      percentChange24h: coin.quote.USD.percent_change_24h ? coin.quote.USD.percent_change_24h.toString() : null,
+      percentChange7d: coin.quote.USD.percent_change_7d ? coin.quote.USD.percent_change_7d.toString() : null,
+      marketCap: coin.quote.USD.market_cap.toString(),
+      marketCapDominance: coin.quote.USD.market_cap_dominance ? coin.quote.USD.market_cap_dominance.toString() : null,
+      fullyDilutedMarketCap: coin.quote.USD.fully_diluted_market_cap ? coin.quote.USD.fully_diluted_market_cap.toString() : null,
+      lastUpdated: new Date(coin.quote.USD.last_updated)
+    };
+    await storage.createAsset(asset);
+  }
+  console.log('Database initialization complete');
+}
