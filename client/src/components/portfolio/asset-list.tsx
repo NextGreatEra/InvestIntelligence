@@ -38,9 +38,13 @@ export default function AssetList() {
   const metrics = ['1h', '24h', '7d'];
   const currentMetric = metrics[metricIndex];
 
-  const { data: portfolioItems = [], isLoading } = useQuery<PortfolioItem[]>({
+  const { data: rawPortfolioItems = [], isLoading } = useQuery<PortfolioItem[]>({
     queryKey: ["/api/portfolio"],
   });
+
+  // Ensure items are strictly sorted by rank
+  const portfolioItems = [...rawPortfolioItems].sort((a, b) => a.rank - b.rank);
+
   const { toast } = useToast();
 
   const removeAssetMutation = useMutation({
@@ -86,6 +90,7 @@ export default function AssetList() {
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate and refetch to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
     },
     onError: (error: Error) => {
@@ -97,18 +102,20 @@ export default function AssetList() {
     },
   });
 
-  const handleDelete = (portfolioItemId: number) => {
-    if (window.confirm('Are you sure you want to remove this asset?')) {
-      removeAssetMutation.mutate(portfolioItemId);
-    }
-  };
-
   const moveAsset = async (currentIndex: number, direction: 'up' | 'down') => {
     const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
     if (newIndex < 0 || newIndex >= portfolioItems.length) return;
 
     const currentItem = portfolioItems[currentIndex];
     const targetItem = portfolioItems[newIndex];
+
+    // Verify rank-index correlation
+    if (currentItem.rank !== currentIndex + 1) {
+      console.error('Rank-index mismatch detected');
+      // Force a refresh of the data
+      await queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+      return;
+    }
 
     // Server expects 1-based ranks and only allows adjacent moves
     const currentRank = currentItem.rank;
@@ -132,6 +139,12 @@ export default function AssetList() {
         description: "Failed to update asset ranking",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleDelete = (portfolioItemId: number) => {
+    if (window.confirm('Are you sure you want to remove this asset?')) {
+      removeAssetMutation.mutate(portfolioItemId);
     }
   };
 
