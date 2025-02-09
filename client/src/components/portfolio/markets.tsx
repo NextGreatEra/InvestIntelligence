@@ -11,6 +11,7 @@ interface MarketData {
   percent_change_1h?: number | null;
   percent_change_24h?: number | null;
   percent_change_7d?: number | null;
+  type?: 'crypto' | 'stock';
 }
 
 export default function Markets() {
@@ -44,14 +45,14 @@ export default function Markets() {
   const cryptoMarkets = markets.filter(m => cryptoSymbols.includes(m.symbol));
   const stockMarkets = markets.filter(m => stockSymbols.includes(m.symbol));
 
-  const getPercentChange = (market: MarketData) => {
+  const getPercentChange = (market: MarketData): number | null => {
     switch(currentMetric) {
       case '1h':
-        return market.percent_change_1h;
+        return market.percent_change_1h ?? null;
       case '24h':
-        return market.percent_change_24h;
+        return market.percent_change_24h ?? null;
       case '7d':
-        return market.percent_change_7d;
+        return market.percent_change_7d ?? null;
       default:
         return null;
     }
@@ -79,47 +80,45 @@ export default function Markets() {
                   onClick={() => setMetricIndex((prev) => (prev + 1) % metrics.length)}
                   className="flex items-center gap-1 hover:bg-accent px-2 py-1 rounded"
                 >
-                  {getPercentChange(market) !== null ? (
-                    <>
-                      {getPercentChange(market)! >= 0 ? (
-                        <ArrowUpIcon className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <ArrowDownIcon className="h-4 w-4 text-red-500" />
-                      )}
-                      <p
-                        className={
-                          getPercentChange(market)! >= 0
-                            ? "text-green-500"
-                            : "text-red-500"
-                        }
-                      >
-                        {Math.abs(getPercentChange(market)!).toFixed(2)}% ({currentMetric})
-                      </p>
-                    </>
-                  ) : (
-                    <span className="text-muted">N/A ({currentMetric})</span>
-                  )}
+                  {(() => {
+                    const change = getPercentChange(market);
+                    if (change === null) {
+                      return <span className="text-muted">N/A ({currentMetric})</span>;
+                    }
+                    return (
+                      <>
+                        {change >= 0 ? (
+                          <ArrowUpIcon className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <ArrowDownIcon className="h-4 w-4 text-red-500" />
+                        )}
+                        <p className={change >= 0 ? "text-green-500" : "text-red-500"}>
+                          {Math.abs(change).toFixed(2)}% ({currentMetric})
+                        </p>
+                      </>
+                    );
+                  })()}
                 </button>
               ) : (
                 <div className="flex items-center gap-1">
-                  {market.percent_change_24h !== null && (
-                    <>
-                      {market.percent_change_24h >= 0 ? (
-                        <ArrowUpIcon className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <ArrowDownIcon className="h-4 w-4 text-red-500" />
-                      )}
-                      <p
-                        className={
-                          market.percent_change_24h >= 0
-                            ? "text-green-500"
-                            : "text-red-500"
-                        }
-                      >
-                        {Math.abs(market.percent_change_24h).toFixed(2)}%
-                      </p>
-                    </>
-                  )}
+                  {(() => {
+                    const change = market.percent_change_24h ?? null;
+                    if (change === null) {
+                      return <span className="text-muted">N/A (24h)</span>;
+                    }
+                    return (
+                      <>
+                        {change >= 0 ? (
+                          <ArrowUpIcon className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <ArrowDownIcon className="h-4 w-4 text-red-500" />
+                        )}
+                        <p className={change >= 0 ? "text-green-500" : "text-red-500"}>
+                          {Math.abs(change).toFixed(2)}%
+                        </p>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>

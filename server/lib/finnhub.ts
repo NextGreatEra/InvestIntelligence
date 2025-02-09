@@ -3,6 +3,58 @@ import { Asset, InsertAsset } from '../../shared/schema';
 
 const FINNHUB_API = "https://finnhub.io/api/v1";
 
+export async function initializeStockSymbols() {
+  try {
+    if (!process.env.FINNHUB_API_KEY) {
+      throw new Error('Missing FINNHUB_API_KEY');
+    }
+
+    console.log('Fetching US stock symbols from Finnhub...');
+    const response = await fetch(
+      `${FINNHUB_API}/stock/symbol?exchange=US&token=${process.env.FINNHUB_API_KEY}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Finnhub API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log(`Received ${data.length} symbols from Finnhub`);
+
+    // Filter for common stocks and ETFs, excluding other types
+    const filteredStocks = data.filter((stock: any) => {
+      if (!stock.symbol || !stock.description) return false;
+      // Only include stocks from major US exchanges (no extension in symbol)
+      // Allow both stocks and ETFs (but exclude other extensions)
+      return !stock.symbol.includes('.') || stock.symbol.endsWith('.ETF');
+    });
+
+    console.log(`Filtered to ${filteredStocks.length} valid stocks`);
+
+    // Store stocks in database
+    let successCount = 0;
+    for (const stock of filteredStocks) {
+      try {
+        await storage.createStock({
+          symbol: stock.symbol,
+          description: stock.description,
+          c: '0', // Initialize with 0, will be updated when price is fetched
+          dp: null
+        });
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to store stock ${stock.symbol}:`, error);
+      }
+    }
+
+    console.log(`Successfully stored ${successCount} stocks in database`);
+    return successCount;
+  } catch (error) {
+    console.error('Failed to initialize stock symbols:', error);
+    throw error;
+  }
+}
+
 export async function searchStocks(query: string): Promise<Partial<InsertAsset>[]> {
   try {
     if (!process.env.FINNHUB_API_KEY) {

@@ -2,7 +2,7 @@ import { Express } from "express";
 import http from "http";
 import { storage } from "./storage";
 import { insertAssetSchema } from "@shared/schema";
-import { searchStocks } from "./lib/finnhub";
+import { searchStocks, initializeStockSymbols } from "./lib/finnhub";
 
 export function registerRoutes(app: Express) {
   const server = http.createServer(app);
@@ -209,6 +209,17 @@ export function registerRoutes(app: Express) {
     } catch (error) {
       console.error('Error updating portfolio item rank:', error);
       res.status(500).json({ message: 'Failed to update portfolio item rank' });
+    }
+  });
+
+  // Add new route for initializing stock symbols
+  app.post('/api/stocks/initialize', async (req, res) => {
+    try {
+      const count = await initializeStockSymbols();
+      res.json({ message: `Successfully initialized ${count} stock symbols` });
+    } catch (error) {
+      console.error('Failed to initialize stock symbols:', error);
+      res.status(500).json({ message: 'Failed to initialize stock symbols' });
     }
   });
 
