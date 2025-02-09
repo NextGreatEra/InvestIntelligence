@@ -13,6 +13,8 @@ export function registerRoutes(app: Express) {
 
   app.get('/api/portfolio/insight', async (req, res) => {
     try {
+      const persona = req.query.persona as string;
+
       // Fetch both portfolio items and market data
       const [portfolioItems, marketAssets] = await Promise.all([
         storage.getPortfolioItemsWithAssets(),
@@ -71,7 +73,8 @@ export function registerRoutes(app: Express) {
       const { generatePortfolioInsight } = await import('./lib/openai');
       const insights = await generatePortfolioInsight({
         portfolioItems,
-        marketAssets
+        marketAssets,
+        persona
       });
 
       res.json(insights);
@@ -79,7 +82,8 @@ export function registerRoutes(app: Express) {
       console.error('Error generating portfolio insight:', error);
       res.status(500).json({ 
         message: "Failed to generate portfolio insight",
-        sentiment: "neutral" 
+        sentiment: "neutral",
+        disclaimer: "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
       });
     }
   });

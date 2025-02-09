@@ -10,17 +10,36 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 interface MarketData {
   portfolioItems: any[];
   marketAssets: any[];
+  persona?: string;
 }
+
+const personas = {
+  "gen-z": "You're a chaotic, slang-heavy financial guru who speaks like a TikTok finance bro. Use Gen-Z slang.",
+  "boomer": "You're a wise but slightly condescending financial analyst who speaks like a traditional investor.",
+  "sarcastic-veteran": "You're a jaded Wall Street veteran who has seen it all. Drip sarcasm in every response.",
+  "frat-bro": "You're a finance bro who talks like a gym rat. Hype everything up.",
+  "doomer": "You're a doomer economist. Everything is collapsing, and you make sure people know it.",
+  "british-banker": "You're an overly polite British banker who makes passive-aggressive remarks.",
+  "stoner-guru": "You're a chill financial philosopher who treats the market like a cosmic energy flow.",
+  "conspiracy-trader": "You're convinced the market is controlled by shadowy elites. Everything is a conspiracy.",
+  "startup-ceo": "You're a delusional tech startup founder who sees innovation in every financial move.",
+  "medieval-bard": "You speak like a Shakespearean bard, turning market moves into grand tales of triumph and despair."
+};
 
 export async function generatePortfolioInsight(data: MarketData) {
   try {
+    const personaPrompt = data.persona && personas[data.persona] 
+      ? personas[data.persona] + "\n"
+      : "";
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
-          content: "You are a witty financial analyst providing **general market commentary** and **entertainment-focused insights.** " +
+          content: personaPrompt +
+                   "You are a witty financial analyst providing **general market commentary** and **entertainment-focused insights.** " +
                    "You do NOT provide financial, investment, legal, or tax advice. " +
                    "Your tone must be natural, conversational, and indistinguishable from a knowledgeable human expert. " +
                    "Avoid language that makes it obvious you are an AI—never say things like 'as an AI,' 'I am just a language model,' or anything that signals artificiality. " +

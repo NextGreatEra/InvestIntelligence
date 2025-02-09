@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
 
 interface InsightResponse {
   message: string;
@@ -8,16 +10,57 @@ interface InsightResponse {
   disclaimer: string;
 }
 
+const personas = {
+  "default": "Default Analyst",
+  "gen-z": "Gen-Z Finance Bro",
+  "boomer": "Traditional Investor",
+  "sarcastic-veteran": "Jaded Wall Street Vet",
+  "frat-bro": "Finance Gym Bro",
+  "doomer": "Doomer Economist",
+  "british-banker": "British Banker",
+  "stoner-guru": "Chill Market Guru",
+  "conspiracy-trader": "Conspiracy Trader",
+  "startup-ceo": "Tech Startup CEO",
+  "medieval-bard": "Market Bard"
+} as const;
+
+type PersonaKey = keyof typeof personas;
+
 export default function AiInsights() {
-  const { data: insight, isLoading } = useQuery<InsightResponse>({
-    queryKey: ["/api/portfolio/insight"],
-    staleTime: Infinity // Prevents automatic refetching
+  const [selectedPersona, setSelectedPersona] = useState<PersonaKey>("default");
+
+  const { data: insight, isLoading, refetch } = useQuery<InsightResponse>({
+    queryKey: ["/api/portfolio/insight", selectedPersona],
+    queryFn: async () => {
+      const response = await fetch(`/api/portfolio/insight${selectedPersona !== "default" ? `?persona=${selectedPersona}` : ''}`);
+      if (!response.ok) throw new Error('Failed to fetch insights');
+      return response.json();
+    },
+    staleTime: Infinity
   });
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle>AI Insights</CardTitle>
+        <Select
+          value={selectedPersona}
+          onValueChange={(value: PersonaKey) => {
+            setSelectedPersona(value);
+            refetch();
+          }}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select style" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(personas).map(([key, label]) => (
+              <SelectItem key={key} value={key}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent>
         {isLoading ? (
