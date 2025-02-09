@@ -32,7 +32,7 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
 
   const { data: results = [], isLoading } = useQuery<AssetSearchResult[]>({
     queryKey: ["/api/assets/search", search],
-    enabled: search.length >= 2,
+    enabled: search.length >= 1,
     queryFn: async () => {
       try {
         const res = await fetch(`/api/assets/search?q=${encodeURIComponent(search)}`);
@@ -122,8 +122,8 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
             />
             <CommandList>
               <CommandEmpty>
-                {search.length < 2 ? (
-                  "Type at least 2 characters to search"
+                {search.length < 1 ? (
+                  "Type to search assets"
                 ) : isLoading ? (
                   <div className="flex items-center justify-center py-2">
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
