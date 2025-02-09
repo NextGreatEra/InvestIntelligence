@@ -80,7 +80,7 @@ export function registerRoutes(app: Express) {
       res.json(insights);
     } catch (error) {
       console.error('Error generating portfolio insight:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to generate portfolio insight",
         sentiment: "neutral",
         disclaimer: "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
@@ -367,6 +367,80 @@ export function registerRoutes(app: Express) {
     }
   });
 
+
+  // Add the new refresh endpoint
+  app.post('/api/refresh', async (req, res) => {
+    try {
+      // Get all portfolio items and market data
+      const [portfolioItems, marketAssets] = await Promise.all([
+        storage.getPortfolioItemsWithAssets(),
+        (async () => {
+          const assets = await storage.getAssets();
+          const cryptoMarkets = assets
+            .filter(coin => ['BTC', 'ETH'].includes(coin.symbol));
+          const stockSymbols = ['SPY', 'QQQ'];
+          const stocks = await Promise.all(
+            stockSymbols.map(symbol => storage.getStockBySymbol(symbol))
+          );
+          return { cryptoMarkets, stocks: stocks.filter(Boolean) };
+        })()
+      ]);
+
+      // Get unique crypto symbols
+      const cryptoSymbols = new Set([
+        ...marketAssets.cryptoMarkets.map(c => c.symbol),
+        ...portfolioItems
+          .filter(item => item.assetType === 'crypto')
+          .map(item => item.asset.symbol)
+      ]);
+
+      // Get unique stock symbols
+      const stockSymbols = new Set([
+        ...marketAssets.stocks.map(s => s.symbol),
+        ...portfolioItems
+          .filter(item => item.assetType === 'stock')
+          .map(item => item.asset.symbol)
+      ]);
+
+      // Update crypto prices
+      if (cryptoSymbols.size > 0) {
+        const { getPrice } = await import('./lib/coinmarketcap');
+        await Promise.all(
+          Array.from(cryptoSymbols).map(async symbol => {
+            try {
+              const { price, percent_change_24h } = await getPrice(symbol);
+              const asset = await storage.getAssetBySymbol(symbol);
+              if (asset) {
+                await storage.updateAssetPrice(asset.id, price, percent_change_24h);
+              }
+            } catch (error) {
+              console.error(`Failed to update ${symbol} price:`, error);
+            }
+          })
+        );
+      }
+
+      // Update stock prices
+      if (stockSymbols.size > 0) {
+        const { getStockPrice } = await import('./lib/finnhub');
+        await Promise.all(
+          Array.from(stockSymbols).map(async symbol => {
+            try {
+              const { price, priceChange } = await getStockPrice(symbol);
+              await storage.updateStock(symbol, price, priceChange);
+            } catch (error) {
+              console.error(`Failed to update ${symbol} price:`, error);
+            }
+          })
+        );
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      res.status(500).json({ message: 'Failed to refresh data' });
+    }
+  });
 
   return server;
 }
