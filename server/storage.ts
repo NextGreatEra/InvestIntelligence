@@ -185,8 +185,8 @@ export class DatabaseStorage implements IStorage {
 
   async createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem> {
     // Get current number of portfolio items
-    const portfolioItems = await db.select().from(portfolioItems);
-    const totalItems = portfolioItems.length;
+    const existingItems = await db.select().from(portfolioItems);
+    const totalItems = existingItems.length;
 
     // New item gets lowest allocation initially
     const allocation = totalItems === 0 ? 100 : Math.round(100 / (totalItems + 1));
@@ -207,8 +207,8 @@ export class DatabaseStorage implements IStorage {
 
   async updatePortfolioRank(id: number, rank: number): Promise<void> {
     // Get total number of portfolio items to calculate allocation
-    const portfolioItems = await db.select().from(portfolioItems);
-    const totalItems = portfolioItems.length;
+    const existingItems = await db.select().from(portfolioItems);
+    const totalItems = existingItems.length;
 
     // Calculate allocation based on rank (higher rank = higher allocation)
     // For example: rank 0 gets 100/(totalItems) * (totalItems) = 100%
