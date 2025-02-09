@@ -207,12 +207,11 @@ export class DatabaseStorage implements IStorage {
 
   async updatePortfolioRank(id: number, newRank: number): Promise<void> {
     await db.transaction(async (tx) => {
-      // fetch and lock all rows to ensure state sync
+      // fetch all items in current order
       const items = await tx
         .select()
         .from(portfolioItems)
-        .orderBy(portfolioItems.rank)
-        .forUpdate(); // locks rows for this transaction
+        .orderBy(portfolioItems.rank);
 
       const totalItems = items.length;
       if (newRank < 1 || newRank > totalItems) {
@@ -236,7 +235,7 @@ export class DatabaseStorage implements IStorage {
         throw new Error('target item not found');
       }
 
-      // swap the ranks
+      // swap the ranks within the transaction for atomicity
       await tx
         .update(portfolioItems)
         .set({ rank: newRank, lastUpdated: new Date() })
