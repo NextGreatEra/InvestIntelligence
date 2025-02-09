@@ -11,7 +11,22 @@ export function registerRoutes(app: Express) {
     res.json({ status: 'ok' });
   });
 
-  app.get('/api/portfolio', async (req, res) => {
+  app.get('/api/portfolio/insight', async (req, res) => {
+  try {
+    const portfolioItems = await storage.getPortfolioItemsWithAssets();
+    const { generatePortfolioInsight } = await import('./lib/openai');
+    const insights = await generatePortfolioInsight(portfolioItems);
+    res.json(insights);
+  } catch (error) {
+    console.error('Error generating portfolio insight:', error);
+    res.status(500).json({ 
+      message: "Failed to generate portfolio insight",
+      sentiment: "neutral" 
+    });
+  }
+});
+
+app.get('/api/portfolio', async (req, res) => {
     try {
       const portfolioItems = await storage.getPortfolioItemsWithAssets();
       const enrichedItems = await Promise.all(
