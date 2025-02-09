@@ -1,5 +1,5 @@
 {
-  "id": "a4031822-e6bd-4de2-a556-b5eaf2c8ba3a",
+  "id": "5bbf862e-1b3c-4209-af1d-00a4f095c234",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -14,6 +14,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "cmc_id": {
+          "name": "cmc_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
         "symbol": {
           "name": "symbol",
           "type": "text",
@@ -26,21 +32,51 @@
           "primaryKey": false,
           "notNull": true
         },
-        "type": {
-          "name": "type",
-          "type": "text",
+        "cmc_rank": {
+          "name": "cmc_rank",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "current_price": {
-          "name": "current_price",
-          "type": "numeric(20, 8)",
+        "circulating_supply": {
+          "name": "circulating_supply",
+          "type": "numeric(30, 8)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "price_change_percentage_24h": {
-          "name": "price_change_percentage_24h",
-          "type": "numeric(10, 2)",
+        "total_supply": {
+          "name": "total_supply",
+          "type": "numeric(30, 8)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "max_supply": {
+          "name": "max_supply",
+          "type": "numeric(30, 8)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "infinite_supply": {
+          "name": "infinite_supply",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_historical_data": {
+          "name": "first_historical_data",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_historical_data": {
+          "name": "last_historical_data",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_added": {
+          "name": "date_added",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
@@ -49,12 +85,74 @@
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
+        },
+        "price": {
+          "name": "price",
+          "type": "numeric(30, 8)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "volume_24h": {
+          "name": "volume_24h",
+          "type": "numeric(30, 8)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "volume_change_24h": {
+          "name": "volume_change_24h",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "percent_change_1h": {
+          "name": "percent_change_1h",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "percent_change_24h": {
+          "name": "percent_change_24h",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "percent_change_7d": {
+          "name": "percent_change_7d",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "market_cap": {
+          "name": "market_cap",
+          "type": "numeric(30, 8)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "market_cap_dominance": {
+          "name": "market_cap_dominance",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fully_diluted_market_cap": {
+          "name": "fully_diluted_market_cap",
+          "type": "numeric(30, 8)",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "assets_cmc_id_unique": {
+          "name": "assets_cmc_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "cmc_id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -90,44 +188,6 @@
         },
         "last_updated": {
           "name": "last_updated",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.price_history": {
-      "name": "price_history",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "asset_id": {
-          "name": "asset_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "price": {
-          "name": "price",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "timestamp": {
-          "name": "timestamp",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
