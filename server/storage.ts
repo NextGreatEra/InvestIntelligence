@@ -205,43 +205,39 @@ export class DatabaseStorage implements IStorage {
     await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
   }
 
-  async updatePortfolioRank(id: number, rank: number): Promise<void> {
+  async updatePortfolioRank(id: number, newRank: number): Promise<void> {
     // Get all portfolio items ordered by rank
     const items = await db.select()
       .from(portfolioItems)
       .orderBy(portfolioItems.rank);
 
     // Find the item we're updating
-    const itemIndex = items.findIndex(item => item.id === id);
-    if (itemIndex === -1) return;
+    const itemToUpdate = items.find(item => item.id === id);
+    if (!itemToUpdate) return;
 
-    const currentRank = items[itemIndex].rank;
+    const oldRank = itemToUpdate.rank;
 
-    // If moving up (lower rank number)
-    if (rank < currentRank) {
-      // Shift items down
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.rank >= rank && item.rank < currentRank) {
+    // Update all affected ranks
+    if (oldRank < newRank) {
+      // Moving down - decrease ranks of items between old and new position
+      for (const item of items) {
+        if (item.rank > oldRank && item.rank <= newRank) {
           await db.update(portfolioItems)
             .set({ 
-              rank: item.rank + 1,
-              lastUpdated: new Date() 
+              rank: item.rank - 1,
+              lastUpdated: new Date()
             })
             .where(eq(portfolioItems.id, item.id));
         }
       }
-    } 
-    // If moving down (higher rank number)
-    else if (rank > currentRank) {
-      // Shift items up
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.rank <= rank && item.rank > currentRank) {
+    } else if (oldRank > newRank) {
+      // Moving up - increase ranks of items between new and old position
+      for (const item of items) {
+        if (item.rank >= newRank && item.rank < oldRank) {
           await db.update(portfolioItems)
             .set({ 
-              rank: item.rank - 1,
-              lastUpdated: new Date() 
+              rank: item.rank + 1,
+              lastUpdated: new Date()
             })
             .where(eq(portfolioItems.id, item.id));
         }
@@ -251,7 +247,7 @@ export class DatabaseStorage implements IStorage {
     // Update the target item's rank
     await db.update(portfolioItems)
       .set({ 
-        rank,
+        rank: newRank,
         lastUpdated: new Date() 
       })
       .where(eq(portfolioItems.id, id));
