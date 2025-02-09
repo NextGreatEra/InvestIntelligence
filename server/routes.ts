@@ -119,9 +119,40 @@ export function registerRoutes(app: Express) {
         type: 'crypto'
       }));
 
-      // Combine and sort results
-      const results = [...formattedStockResults, ...formattedCryptoResults]
-        .sort((a, b) => a.symbol.localeCompare(b.symbol));
+      // Combine results
+      let results = [...formattedStockResults, ...formattedCryptoResults];
+
+      // If no results found and the query looks like a stock symbol (uppercase, 1-5 chars)
+      if (results.length === 0 && /^[A-Z]{1,5}$/.test(q.toUpperCase())) {
+        try {
+          const { getStockPrice } = await import('./lib/finnhub');
+          const { price, priceChange } = await getStockPrice(q.toUpperCase());
+
+          // If we got a valid price, create a new stock entry
+          if (price > 0) {
+            const newStock = await storage.createStock({
+              symbol: q.toUpperCase(),
+              description: q.toUpperCase(), // We'll just use the symbol as description initially
+              c: price.toString(),
+              dp: priceChange.toString()
+            });
+
+            results = [{
+              id: newStock.id.toString(),
+              symbol: newStock.symbol,
+              name: newStock.description,
+              current_price: price,
+              percent_change_24h: priceChange,
+              type: 'stock'
+            }];
+          }
+        } catch (error) {
+          console.error('Error fetching from Finnhub:', error);
+        }
+      }
+
+      // Sort results
+      results = results.sort((a, b) => a.symbol.localeCompare(b.symbol));
 
       res.json(results);
     } catch (error) {

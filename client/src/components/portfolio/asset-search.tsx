@@ -47,6 +47,14 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
           return [];
         }
 
+        // If no results found and the input looks like a stock ticker
+        if (Array.isArray(data) && data.length === 0 && /^[A-Z]{1,5}$/.test(search.toUpperCase())) {
+          toast({
+            title: "Searching Stock",
+            description: "Checking Finnhub API for stock data...",
+          });
+        }
+
         return Array.isArray(data) ? data : [];
       } catch (err) {
         toast({
