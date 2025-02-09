@@ -2,9 +2,22 @@
 import { db } from "../db";
 import { stocks } from "@shared/schema";
 
-// Read and parse the stock data
-const nyseStocks = [/* XNYS data */];
-const nasdaqStocks = [/* XNAS data */];
+// Parse the NYSE and NASDAQ data
+const nyseStocks = [
+  { symbol: "LND", description: "BRASILAGRO-CIA BRA - SPN ADR" },
+  { symbol: "OMI", description: "OWENS & MINOR INC" },
+  { symbol: "HGTY", description: "HAGERTY INC-A" },
+  { symbol: "BKN", description: "BLACKROCK INVEST QLTY MUNI" },
+  { symbol: "BRO", description: "BROWN & BROWN INC" }
+];
+
+const nasdaqStocks = [
+  { symbol: "CAAS", description: "CHINA AUTOMOTIVE SYSTEMS INC" },
+  { symbol: "DYNX", description: "DYNAMIX CORP" },
+  { symbol: "HFBL", description: "HOME FEDERAL BANCORP INC/LA" },
+  { symbol: "TWNP", description: "TWIN HOSPITALITY GRP INC" },
+  { symbol: "PFES", description: "AXS 2X PFE Bear Daily ETF" }
+];
 
 async function importStocks() {
   try {
