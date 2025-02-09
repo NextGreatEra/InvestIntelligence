@@ -9,31 +9,39 @@ export async function initializeStockSymbols() {
       throw new Error('Missing FINNHUB_API_KEY');
     }
 
-    console.log('Fetching US stock symbols from Finnhub...');
-    const response = await fetch(
-      `${FINNHUB_API}/stock/symbol?exchange=US&token=${process.env.FINNHUB_API_KEY}`
-    );
+    console.log('Fetching stock symbols from NYSE and NASDAQ...');
 
-    if (!response.ok) {
-      throw new Error(`Finnhub API error: ${response.statusText}`);
+    // Fetch from both exchanges
+    const [nyseResponse, nasdaqResponse] = await Promise.all([
+      fetch(`${FINNHUB_API}/stock/symbol?mic=XNYS&token=${process.env.FINNHUB_API_KEY}`),
+      fetch(`${FINNHUB_API}/stock/symbol?mic=XNAS&token=${process.env.FINNHUB_API_KEY}`)
+    ]);
+
+    if (!nyseResponse.ok || !nasdaqResponse.ok) {
+      throw new Error(`Finnhub API error: ${!nyseResponse.ok ? nyseResponse.statusText : nasdaqResponse.statusText}`);
     }
 
-    const data = await response.json();
-    console.log(`Received ${data.length} symbols from Finnhub`);
+    const nyseData = await nyseResponse.json();
+    const nasdaqData = await nasdaqResponse.json();
 
-    // Filter for common stocks and ETFs, excluding other types
-    const filteredStocks = data.filter((stock: any) => {
+    console.log(`Received ${nyseData.length} NYSE symbols and ${nasdaqData.length} NASDAQ symbols from Finnhub`);
+
+    // Combine all stocks and remove duplicates using Set
+    const allStocks = [...nyseData, ...nasdaqData];
+    const uniqueStocks = Array.from(
+      new Map(allStocks.map(stock => [stock.symbol, stock])).values()
+    ).filter((stock: any) => {
       if (!stock.symbol || !stock.description) return false;
-      // Only include stocks from major US exchanges (no extension in symbol)
+      // Only include stocks from NYSE and NASDAQ
       // Allow both stocks and ETFs (but exclude other extensions)
       return !stock.symbol.includes('.') || stock.symbol.endsWith('.ETF');
     });
 
-    console.log(`Filtered to ${filteredStocks.length} valid stocks`);
+    console.log(`Filtered to ${uniqueStocks.length} unique valid stocks`);
 
     // Store stocks in database
     let successCount = 0;
-    for (const stock of filteredStocks) {
+    for (const stock of uniqueStocks) {
       try {
         await storage.createStock({
           symbol: stock.symbol,
@@ -43,11 +51,14 @@ export async function initializeStockSymbols() {
         });
         successCount++;
       } catch (error) {
-        console.error(`Failed to store stock ${stock.symbol}:`, error);
+        // Skip duplicates (stocks that are already in the database)
+        if (!(error instanceof Error && error.message.includes('unique constraint'))) {
+          console.error(`Failed to store stock ${stock.symbol}:`, error);
+        }
       }
     }
 
-    console.log(`Successfully stored ${successCount} stocks in database`);
+    console.log(`Successfully stored ${successCount} new stocks in database`);
     return successCount;
   } catch (error) {
     console.error('Failed to initialize stock symbols:', error);
