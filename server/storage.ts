@@ -188,11 +188,11 @@ export class DatabaseStorage implements IStorage {
     const existingItems = await db.select().from(portfolioItems);
     const totalItems = existingItems.length;
 
-    // New item gets last rank
+    // New item gets last rank, using 1-based ranking
     const [portfolioItem] = await db.insert(portfolioItems)
       .values({ 
         ...item,
-        rank: totalItems, // Use zero-based ranking
+        rank: totalItems + 1, // Use one-based ranking
         lastUpdated: new Date() 
       })
       .returning();
