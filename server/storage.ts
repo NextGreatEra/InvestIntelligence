@@ -220,18 +220,34 @@ export class DatabaseStorage implements IStorage {
     // If ranks are the same, no need to update
     if (oldRank === newRank) return;
 
-    // Find the item we're swapping with
-    const itemToSwapWith = items.find(item => item.rank === newRank);
-    if (!itemToSwapWith) return;
+    // Update ranks for other items
+    if (oldRank < newRank) {
+      // Moving down - decrease ranks of items between old and new
+      await Promise.all(items.map(async (item) => {
+        if (item.rank > oldRank && item.rank <= newRank && item.id !== id) {
+          await db.update(portfolioItems)
+            .set({ 
+              rank: item.rank - 1,
+              lastUpdated: new Date()
+            })
+            .where(eq(portfolioItems.id, item.id));
+        }
+      }));
+    } else {
+      // Moving up - increase ranks of items between new and old
+      await Promise.all(items.map(async (item) => {
+        if (item.rank >= newRank && item.rank < oldRank && item.id !== id) {
+          await db.update(portfolioItems)
+            .set({ 
+              rank: item.rank + 1,
+              lastUpdated: new Date()
+            })
+            .where(eq(portfolioItems.id, item.id));
+        }
+      }));
+    }
 
-    // Perform the swap
-    await db.update(portfolioItems)
-      .set({ 
-        rank: oldRank,
-        lastUpdated: new Date()
-      })
-      .where(eq(portfolioItems.id, itemToSwapWith.id));
-
+    // Update the moved item's rank
     await db.update(portfolioItems)
       .set({ 
         rank: newRank,
