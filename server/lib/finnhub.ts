@@ -1,3 +1,4 @@
+import { storage } from "../storage";
 import { Asset, InsertAsset } from '../../shared/schema';
 
 const FINNHUB_API = "https://finnhub.io/api/v1";
@@ -65,29 +66,21 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
         return false;
       })
       .sort((a: any, b: any) => {
-        // Prioritize exact matches and shorter symbols
         const aScore = a.symbol.toLowerCase() === query.toLowerCase() ? 3 :
                       a.symbol.toLowerCase().startsWith(query.toLowerCase()) ? 2 :
                       a.description.toLowerCase().includes(query.toLowerCase()) ? 1 : 0;
         const bScore = b.symbol.toLowerCase() === query.toLowerCase() ? 3 :
                       b.symbol.toLowerCase().startsWith(query.toLowerCase()) ? 2 :
                       b.description.toLowerCase().includes(query.toLowerCase()) ? 1 : 0;
-        
+
         if (aScore !== bScore) return bScore - aScore;
         return a.symbol.length - b.symbol.length;
-      })
-      .sort((a: any, b: any) => {
-        const aScore = (a.symbol.toLowerCase().includes(query.toLowerCase()) ? 2 : 0) +
-                      (a.description.toLowerCase().includes(query.toLowerCase()) ? 1 : 0);
-        const bScore = (b.symbol.toLowerCase().includes(query.toLowerCase()) ? 2 : 0) +
-                      (b.description.toLowerCase().includes(query.toLowerCase()) ? 1 : 0);
-        return bScore - aScore;
       })
       .slice(0, 5);
 
     console.log(`Filtered to ${filteredResults.length} results:`, filteredResults);
 
-    // Fetch prices for filtered results
+    // Fetch prices and store in database for filtered results
     const resultsWithPrices = await Promise.all(
       filteredResults.map(async (result: any) => {
         try {
@@ -107,6 +100,14 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
             console.log(`Invalid price data for ${result.symbol}:`, priceData);
             return null;
           }
+
+          // Store in database
+          await storage.createStock({
+            symbol: result.symbol,
+            description: result.description,
+            c: priceData.c.toString(),
+            dp: priceData.dp?.toString() || null
+          });
 
           return {
             symbol: result.symbol,
@@ -152,6 +153,12 @@ export async function getStockPrice(symbol: string): Promise<{ price: number; pr
 
     // Calculate percentage change using current (c) and previous close (pc)
     const priceChange = ((data.c - data.pc) / data.pc) * 100;
+
+    // Update stock price in database
+    const existingStock = await storage.getStockBySymbol(symbol);
+    if (existingStock) {
+      await storage.updateStock(symbol, data.c, priceChange);
+    }
 
     return {
       price: data.c,
