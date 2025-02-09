@@ -110,9 +110,44 @@ export default function AssetList() {
     const currentItem = portfolioItems[currentIndex];
     const targetItem = portfolioItems[newIndex];
 
-    // First swap the target item to avoid rank conflict
-    await updateRankMutation.mutateAsync({ id: targetItem.id, newRank: currentItem.rank });
-    await updateRankMutation.mutateAsync({ id: currentItem.id, newRank: targetItem.rank });
+    // Calculate the new ranks
+    if (direction === 'up') {
+      // Moving up: decrease current item's rank, increase ranks of items in between
+      await updateRankMutation.mutateAsync({ 
+        id: currentItem.id, 
+        newRank: targetItem.rank 
+      });
+
+      // Update ranks of affected items
+      const itemsToUpdate = portfolioItems
+        .filter(item => item.rank >= targetItem.rank && item.rank < currentItem.rank)
+        .sort((a, b) => a.rank - b.rank);
+
+      for (const item of itemsToUpdate) {
+        await updateRankMutation.mutateAsync({
+          id: item.id,
+          newRank: item.rank + 1
+        });
+      }
+    } else {
+      // Moving down: increase current item's rank, decrease ranks of items in between
+      await updateRankMutation.mutateAsync({ 
+        id: currentItem.id, 
+        newRank: targetItem.rank +1
+      });
+
+      // Update ranks of affected items
+      const itemsToUpdate = portfolioItems
+        .filter(item => item.rank <= targetItem.rank && item.rank > currentItem.rank)
+        .sort((a, b) => b.rank - a.rank);
+
+      for (const item of itemsToUpdate) {
+        await updateRankMutation.mutateAsync({
+          id: item.id,
+          newRank: item.rank - 1
+        });
+      }
+    }
   };
 
   const handleMetricClick = () => {
