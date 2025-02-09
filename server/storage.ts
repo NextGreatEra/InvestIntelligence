@@ -192,7 +192,8 @@ export class DatabaseStorage implements IStorage {
     const [portfolioItem] = await db.insert(portfolioItems)
       .values({ 
         ...item,
-        allocation: (totalItems + 1).toString(), // Use allocation column to store rank
+        rank: totalItems, // Use zero-based ranking
+        allocation: "0", // Initialize allocation to 0
         lastUpdated: new Date() 
       })
       .returning();
@@ -207,7 +208,6 @@ export class DatabaseStorage implements IStorage {
     await db.update(portfolioItems)
       .set({ 
         rank,
-        allocation: (rank + 1).toString(), // Store rank number (1-based) in allocation
         lastUpdated: new Date() 
       })
       .where(eq(portfolioItems.id, id));
