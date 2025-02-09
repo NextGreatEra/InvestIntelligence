@@ -43,6 +43,7 @@ export async function generatePortfolioInsight(data: marketdata) {
       data.persona && personas[data.persona]
         ? personas[data.persona] + "\n"
         : "";
+
     const response = await ai.chat.completions.create({
       model: "gpt-4o",
       response_format: { type: "json_object" },
@@ -56,23 +57,17 @@ export async function generatePortfolioInsight(data: marketdata) {
             "your tone must be natural, conversational, and indistinguishable from a knowledgeable human expert. " +
             "avoid any language that screams 'i'm an ai'—no 'as an ai,' no 'i am just a language model,' and no robotic bullshit. " +
             "keep your response short, punchy, and engaging—like a funny tweet on x, 280 characters or less. " +
-            "focus on how the user's portfolio is either kicking ass or getting its ass handed to it compared to the market. " +
-            "if the portfolio is empty, throw in a profanity-laced dig about how genius it is to have no assets. " +
-            "do not use overly formal or robotic phrases and specifically avoid these words: 'delve,' 'explore,' 'pivotal,' 'certainly,' 'in the realm of,' " +
-            "'it is important to understand,' 'embark on your journey,' 'a nuanced understanding of,' 'a meticulous examination of,' 'is a game changer,' " +
-            "'tapestry,' 'fostering,' 'crucial,' 'in essence,' 'ultimately,' 'moreover,' 'furthermore,' 'notably,' 'in conclusion,' 'at the end of the day,' " +
-            "'essentially,' 'significantly,' 'intriguingly,' 'remarkably,' 'from a holistic perspective,' 'in summary,' 'in the context of,' " +
-            "'a deep dive into,' 'given the circumstances,' 'key takeaway,' 'underscoring,' 'therefore,' and 'consequently.' " +
-            "your main message must be exactly 280 characters or less. " +
+            "whenever you mention a price change, include a timeframe (e.g., 'in the last 24hr' or 'over the past week'). " +
+            "avoid nonsensical phrases stick to clear, relatable language. " +
+            "analyze the user's portfolio holdings: if they're all in one sector, throw in a witty dig about lack of diversity; if they're well-diversified, celebrate that. " +
+            "feel free to drop pop culture references or trending slang to keep things engaging. " +
             "format your response as a json object with 'message', 'sentiment', and 'disclaimer' fields. " +
             "the 'disclaimer' field should always contain: 'not financial advice. do your own research and consult licensed professionals before making investment decisions.'"
         },
         {
           role: "user",
           content:
-            `compare the user's portfolio to the market and give a witty, engaging insight. portfolio: ${JSON.stringify(
-              data.portfolioItems
-            )}. market overview: ${JSON.stringify(data.marketAssets)}`
+            `compare the user's portfolio to the market and give a witty, engaging insight. portfolio: ${JSON.stringify(data.portfolioItems)}. market overview: ${JSON.stringify(data.marketAssets)}`
         }
       ]
     });
@@ -81,10 +76,10 @@ export async function generatePortfolioInsight(data: marketdata) {
     console.error("openai api error:", error);
     return {
       message:
-        "fuck, i'm hit with some analysis paralysis. try again later, alright?",
+        "I'm hit with some analysis paralysis. try again later, alright?",
       sentiment: "neutral",
       disclaimer:
-        "not financial advice. do your own research and consult licensed professionals before making investment decisions."
+        "Not financial advice. do your own research and consult licensed professionals before making investment decisions."
     };
   }
 }
