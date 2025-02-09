@@ -165,26 +165,48 @@ export function registerRoutes(app: Express) {
           current_price: parseFloat(coin.price),
           percent_change_1h: coin.percentChange1h ? parseFloat(coin.percentChange1h) : null,
           percent_change_24h: coin.percentChange24h ? parseFloat(coin.percentChange24h) : null,
-          percent_change_7d: coin.percentChange7d ? parseFloat(coin.percentChange7d) : null
+          percent_change_7d: coin.percentChange7d ? parseFloat(coin.percentChange7d) : null,
+          type: 'crypto'
         }));
 
-      // Fetch stock data as before
+      // Fetch stock data from our database
       const stockSymbols = ['SPY', 'QQQ'];
-      const { getStockPrice } = await import('./lib/finnhub');
-      const stockPrices = await Promise.all(
+      const stockData = await Promise.all(
         stockSymbols.map(async symbol => {
-          const { price, priceChange } = await getStockPrice(symbol);
+          let stock = await storage.getStockBySymbol(symbol);
+
+          // If stock is missing or has no price data, fetch it from Finnhub
+          if (!stock || !stock.c || !stock.dp) {
+            console.log(`Fetching fresh data for ${symbol} from Finnhub`);
+            const { getStockPrice } = await import('./lib/finnhub');
+            try {
+              const { price, priceChange } = await getStockPrice(symbol);
+              // This will create or update the stock in our database
+              stock = await storage.createStock({
+                symbol,
+                description: symbol === 'SPY' ? 'S&P 500 ETF' : 'Nasdaq 100 ETF',
+                c: price.toString(),
+                dp: priceChange.toString()
+              });
+            } catch (error) {
+              console.error(`Failed to fetch ${symbol} data:`, error);
+              return null;
+            }
+          }
+
           return {
-            id: symbol,
-            symbol,
-            name: symbol === 'SPY' ? 'S&P 500 ETF' : 'Nasdaq 100 ETF',
-            current_price: price,
-            price_change_percentage_24h: priceChange
+            id: stock.id.toString(),
+            symbol: stock.symbol,
+            name: stock.description,
+            current_price: parseFloat(stock.c),
+            percent_change_24h: stock.dp ? parseFloat(stock.dp) : null,
+            type: 'stock'
           };
         })
       );
 
-      res.json([...cryptoMarkets, ...stockPrices]);
+      const validStockData = stockData.filter(stock => stock !== null);
+      res.json([...cryptoMarkets, ...validStockData]);
     } catch (error) {
       console.error('Error fetching markets:', error);
       res.status(500).json({ message: 'Failed to fetch markets data' });
