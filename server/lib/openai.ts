@@ -7,21 +7,28 @@ if (!process.env.OPENAI_API_KEY) {
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-export async function generatePortfolioInsight(portfolio: any) {
+interface MarketData {
+  portfolioItems: any[];
+  marketAssets: any[];
+}
+
+export async function generatePortfolioInsight(data: MarketData) {
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
+      response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content: "You are a witty financial advisor analyzing both market conditions and portfolio performance. " +
-                   "Keep your insights humorous yet informative, focusing on the relationship between the market " +
-                   "trends and the portfolio's composition. Format your response as valid JSON with 'message' " +
-                   "and 'sentiment' fields."
+                   "Analyze both the user's portfolio and the broader market conditions to provide comprehensive insights. " +
+                   "Keep your insights humorous yet informative. Consider the relationships between market trends, " +
+                   "portfolio composition, and major market indicators (crypto and stock indices). " +
+                   "Format your response as a JSON object with 'message' and 'sentiment' fields."
         },
         {
           role: "user",
-          content: `Please analyze this portfolio data and return a JSON response with 'message' and 'sentiment' fields: ${JSON.stringify(portfolio)}`
+          content: `Please analyze this combined market data and provide insights. Portfolio: ${JSON.stringify(data.portfolioItems)}. Market Overview: ${JSON.stringify(data.marketAssets)}`
         }
       ]
     });

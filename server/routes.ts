@@ -12,21 +12,79 @@ export function registerRoutes(app: Express) {
   });
 
   app.get('/api/portfolio/insight', async (req, res) => {
-  try {
-    const portfolioItems = await storage.getPortfolioItemsWithAssets();
-    const { generatePortfolioInsight } = await import('./lib/openai');
-    const insights = await generatePortfolioInsight(portfolioItems);
-    res.json(insights);
-  } catch (error) {
-    console.error('Error generating portfolio insight:', error);
-    res.status(500).json({ 
-      message: "Failed to generate portfolio insight",
-      sentiment: "neutral" 
-    });
-  }
-});
+    try {
+      // Fetch both portfolio items and market data
+      const [portfolioItems, marketAssets] = await Promise.all([
+        storage.getPortfolioItemsWithAssets(),
+        (async () => {
+          const assets = await storage.getAssets();
+          const cryptoMarkets = assets
+            .filter(coin => ['BTC', 'ETH'].includes(coin.symbol))
+            .filter((coin, index, self) =>
+              index === self.findIndex((t) => t.symbol === coin.symbol)
+            )
+            .map(coin => ({
+              id: coin.id.toString(),
+              symbol: coin.symbol,
+              name: coin.name,
+              current_price: parseFloat(coin.price),
+              percent_change_24h: coin.percentChange24h ? parseFloat(coin.percentChange24h) : null,
+              type: 'crypto'
+            }));
 
-app.get('/api/portfolio', async (req, res) => {
+          const stockSymbols = ['SPY', 'QQQ'];
+          const stockData = await Promise.all(
+            stockSymbols.map(async symbol => {
+              let stock = await storage.getStockBySymbol(symbol);
+              if (!stock || !stock.c || !stock.dp) {
+                const { getStockPrice } = await import('./lib/finnhub');
+                try {
+                  const { price, priceChange } = await getStockPrice(symbol);
+                  stock = await storage.createStock({
+                    symbol,
+                    description: symbol === 'SPY' ? 'S&P 500 ETF' : 'Nasdaq 100 ETF',
+                    c: price.toString(),
+                    dp: priceChange.toString()
+                  });
+                } catch (error) {
+                  console.error(`Failed to fetch ${symbol} data:`, error);
+                  return null;
+                }
+              }
+
+              return stock ? {
+                id: stock.id.toString(),
+                symbol: stock.symbol,
+                name: stock.description,
+                current_price: parseFloat(stock.c),
+                percent_change_24h: stock.dp ? parseFloat(stock.dp) : null,
+                type: 'stock'
+              } : null;
+            })
+          );
+
+          const validStockData = stockData.filter(stock => stock !== null);
+          return [...cryptoMarkets, ...validStockData];
+        })()
+      ]);
+
+      const { generatePortfolioInsight } = await import('./lib/openai');
+      const insights = await generatePortfolioInsight({
+        portfolioItems,
+        marketAssets
+      });
+
+      res.json(insights);
+    } catch (error) {
+      console.error('Error generating portfolio insight:', error);
+      res.status(500).json({ 
+        message: "Failed to generate portfolio insight",
+        sentiment: "neutral" 
+      });
+    }
+  });
+
+  app.get('/api/portfolio', async (req, res) => {
     try {
       const portfolioItems = await storage.getPortfolioItemsWithAssets();
       const enrichedItems = await Promise.all(
