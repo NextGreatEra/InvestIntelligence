@@ -123,7 +123,7 @@ export default function AssetList() {
     try {
       await updateRankMutation.mutateAsync({
         id: currentItem.id,
-        newRank: targetRank // Use the target item's rank directly
+        newRank: targetRank
       });
     } catch (error) {
       console.error('Error moving asset:', error);
