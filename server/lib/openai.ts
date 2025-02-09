@@ -1,22 +1,19 @@
 import openai from "openai";
 
-if (!process.env.OPENAI_API_KEY) {
+if (!process.env.openai_api_key) {
   throw new Error("missing openai_api_key environment variable");
 }
 
-const ai = new openai({ apiKey: process.env.OPENAI_API_KEY });
+const ai = new openai({ apiKey: process.env.openai_api_key });
 
-/* market data interface */
 interface marketdata {
-  portfolioItems: any[];
-  marketAssets: any[];
+  portfolioitems: any[];
+  marketassets: any[];
   persona?: string;
 }
 
-/* define personas with plenty of edge and swearing for extra flavor */
 const personas = {
-  "gen-z":
-    "you're a chaotic, slang-heavy financial guru who talks like a tik-tok finance bro. drop mad swears and keep it 100.",
+  "gen-z": `you're a chaotic, slang-heavy financial guru who talks like a tik-tok finance bro. drop mad swears and keep it 100. example: "frfr you're skibidi down bad no cap. on god you better learn to code." *fortnite dance*`,
   boomer:
     "you're a wise-ass, slightly condescending financial analyst with no time for bullshit—just straight, no-nonsense insights.",
   "sarcastic-veteran":
@@ -37,13 +34,13 @@ const personas = {
     "you speak like a shakespearean bard turning market moves into epic tales—epic, raw, and with some well-timed swearing."
 };
 
-export async function generatePortfolioInsight(data: marketdata) {
+
+export async function generateportfolioinsight(data: marketdata) {
   try {
-    const personaPrompt =
+    const personaprompt =
       data.persona && personas[data.persona]
         ? personas[data.persona] + "\n"
         : "";
-
     const response = await ai.chat.completions.create({
       model: "gpt-4o",
       response_format: { type: "json_object" },
@@ -51,23 +48,25 @@ export async function generatePortfolioInsight(data: marketdata) {
         {
           role: "system",
           content:
-            personaPrompt +
-            "you are a witty financial analyst providing market commentary that compares the user's portfolio to the broader market. " +
-            "you do not provide financial, investment, legal, or tax advice. " +
-            "your tone must be natural, conversational, and indistinguishable from a knowledgeable human expert. " +
-            "avoid any language that screams 'i'm an ai'—no 'as an ai,' no 'i am just a language model,' and no robotic bullshit. " +
-            "keep your response short, punchy, and engaging—like a funny tweet on x, 280 characters or less. " +
+            personaprompt +
+            "you are a witty financial analyst providing market commentary comparing the user's portfolio to the broader market. " +
+            "do not provide financial, investment, legal, or tax advice. " +
+            "your tone is natural, conversational, and indistinguishable from a savvy human expert. " +
+            "avoid any language that reveals you're an ai—no 'as an ai,' 'i am just a language model,' or robotic bullshit. " +
+            "keep your response short, punchy, and tweet-like (280 characters or less). " +
             "whenever you mention a price change, include a timeframe (e.g., 'in the last 24hr' or 'over the past week'). " +
-            "avoid nonsensical phrases stick to clear, relatable language. " +
-            "analyze the user's portfolio holdings: if they're all in one sector, throw in a witty dig about lack of diversity; if they're well-diversified, celebrate that. " +
-            "feel free to drop pop culture references or trending slang to keep things engaging. " +
+            "analyze the user's portfolio in depth: if holdings are confined to one sector or if most stocks fall within similar industries (like all crypto-related or tech), throw in a witty dig about the lack of true diversification; if the portfolio is diversified across industries, celebrate that. " +
+            "if overall performance is negative, avoid hyping it up as 'hot' or 'winning'—stay real about the losses. " +
+            "also, if one asset bucks the trend (for example, while most assets are down, a lower-ranked asset is up), call it out explicitly with a comment like 'hey, i bet you wish you had more of [asset]!' " +
             "format your response as a json object with 'message', 'sentiment', and 'disclaimer' fields. " +
             "the 'disclaimer' field should always contain: 'not financial advice. do your own research and consult licensed professionals before making investment decisions.'"
         },
         {
           role: "user",
           content:
-            `compare the user's portfolio to the market and give a witty, engaging insight. portfolio: ${JSON.stringify(data.portfolioItems)}. market overview: ${JSON.stringify(data.marketAssets)}`
+            `compare the user's portfolio to the market and give a witty, engaging insight. portfolio: ${JSON.stringify(
+              data.portfolioitems
+            )}. market overview: ${JSON.stringify(data.marketassets)}`
         }
       ]
     });
@@ -76,10 +75,10 @@ export async function generatePortfolioInsight(data: marketdata) {
     console.error("openai api error:", error);
     return {
       message:
-        "I'm hit with some analysis paralysis. try again later, alright?",
+        "i'm hit with some analysis paralysis. try again later, alright?",
       sentiment: "neutral",
       disclaimer:
-        "Not financial advice. do your own research and consult licensed professionals before making investment decisions."
+        "not financial advice. do your own research and consult licensed professionals before making investment decisions."
     };
   }
 }
