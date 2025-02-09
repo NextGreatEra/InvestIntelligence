@@ -2,7 +2,6 @@ import { Express } from "express";
 import http from "http";
 import { storage } from "./storage";
 import { insertAssetSchema } from "@shared/schema";
-//import { searchStocks, initializeStockSymbols } from "./lib/finnhub"; // Removed as not used after changes
 
 export function registerRoutes(app: Express) {
   const server = http.createServer(app);
@@ -74,17 +73,35 @@ export function registerRoutes(app: Express) {
     }
 
     try {
-      let results = [];
-
       // Search in stocks table
       const stockResults = await storage.searchStocks(q);
-      const formattedStockResults = stockResults.map(stock => ({
-        id: stock.id.toString(),
-        symbol: stock.symbol,
-        name: stock.description,
-        current_price: parseFloat(stock.c),
-        percent_change_24h: stock.dp ? parseFloat(stock.dp) : null,
-        type: 'stock'
+      const formattedStockResults = await Promise.all(stockResults.map(async stock => {
+        // If price is 0 or null, fetch fresh price from Finnhub
+        let currentPrice = parseFloat(stock.c);
+        let dailyChange = stock.dp ? parseFloat(stock.dp) : null;
+
+        if (currentPrice === 0 || !currentPrice) {
+          try {
+            const { getStockPrice } = await import('./lib/finnhub');
+            const { price, priceChange } = await getStockPrice(stock.symbol);
+            currentPrice = price;
+            dailyChange = priceChange;
+
+            // Update stock price in database
+            await storage.updateStock(stock.symbol, price, priceChange);
+          } catch (error) {
+            console.error(`Failed to fetch price for ${stock.symbol}:`, error);
+          }
+        }
+
+        return {
+          id: stock.id.toString(),
+          symbol: stock.symbol,
+          name: stock.description,
+          current_price: currentPrice,
+          percent_change_24h: dailyChange,
+          type: 'stock'
+        };
       }));
 
       // Search in assets (crypto) table
@@ -100,8 +117,8 @@ export function registerRoutes(app: Express) {
         type: 'crypto'
       }));
 
-      // Combine and sort results by symbol alphabetically
-      results = [...formattedStockResults, ...formattedCryptoResults]
+      // Combine and sort results
+      const results = [...formattedStockResults, ...formattedCryptoResults]
         .sort((a, b) => a.symbol.localeCompare(b.symbol));
 
       res.json(results);
@@ -114,7 +131,6 @@ export function registerRoutes(app: Express) {
   app.post('/api/portfolio', async (req, res) => {
     try {
       console.log('Received portfolio item request:', req.body);
-
       const { symbol, name, type } = req.body;
 
       if (!symbol || !name || !type) {
@@ -123,13 +139,18 @@ export function registerRoutes(app: Express) {
 
       let asset;
       if (type === 'stock') {
-        // For stocks, get existing stock from database
         asset = await storage.getStockBySymbol(symbol);
         if (!asset) {
           throw new Error('Stock not found in database');
         }
+
+        // If price is 0 or missing, fetch fresh price
+        if (parseFloat(asset.c) === 0 || !asset.c) {
+          const { getStockPrice } = await import('./lib/finnhub');
+          const { price, priceChange } = await getStockPrice(symbol);
+          asset = await storage.updateStock(symbol, price, priceChange);
+        }
       } else if (type === 'crypto') {
-        // For crypto, get existing asset from database
         asset = await storage.getAssetBySymbol(symbol);
         if (!asset) {
           throw new Error('Crypto asset not found in database');
@@ -138,7 +159,6 @@ export function registerRoutes(app: Express) {
         throw new Error('Invalid asset type');
       }
 
-      // Create the portfolio item
       const portfolioItem = await storage.createPortfolioItem({
         assetId: asset.id,
         rank: 0,
@@ -236,17 +256,6 @@ export function registerRoutes(app: Express) {
     }
   });
 
-
-  //Removed as not used after changes
-  // app.post('/api/stocks/initialize', async (req, res) => {
-  //   try {
-  //     const count = await initializeStockSymbols();
-  //     res.json({ message: `Successfully initialized ${count} stock symbols` });
-  //   } catch (error) {
-  //     console.error('Failed to initialize stock symbols:', error);
-  //     res.status(500).json({ message: 'Failed to initialize stock symbols' });
-  //   }
-  // });
 
   return server;
 }
