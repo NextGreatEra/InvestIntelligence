@@ -217,34 +217,17 @@ export class DatabaseStorage implements IStorage {
 
     const oldRank = itemToUpdate.rank;
 
-    // Ensure newRank is within valid bounds (1 to number of items)
-    newRank = Math.max(1, Math.min(newRank, items.length));
+    // Ensure newRank is within valid bounds and only allow adjacent moves
+    if (newRank < 1 || newRank > items.length || Math.abs(newRank - oldRank) !== 1) {
+      return;
+    }
 
-    // If ranks are the same, no need to update
-    if (oldRank === newRank) return;
+    // Find the item we're swapping with
+    const itemToSwap = items.find(item => item.rank === newRank);
+    if (!itemToSwap) return;
 
     // Begin transaction to ensure atomic updates
     await db.transaction(async (tx) => {
-      if (oldRank < newRank) {
-        // Moving down - shift items between old and new rank up by 1
-        await tx
-          .update(portfolioItems)
-          .set({ 
-            rank: sql`${portfolioItems.rank} - 1`,
-            lastUpdated: new Date()
-          })
-          .where(sql`rank > ${oldRank} AND rank <= ${newRank}`);
-      } else {
-        // Moving up - shift items between new and old rank down by 1
-        await tx
-          .update(portfolioItems)
-          .set({ 
-            rank: sql`${portfolioItems.rank} + 1`,
-            lastUpdated: new Date()
-          })
-          .where(sql`rank >= ${newRank} AND rank < ${oldRank}`);
-      }
-
       // Update the target item's rank
       await tx
         .update(portfolioItems)
@@ -253,6 +236,15 @@ export class DatabaseStorage implements IStorage {
           lastUpdated: new Date()
         })
         .where(eq(portfolioItems.id, id));
+
+      // Update the swapped item's rank
+      await tx
+        .update(portfolioItems)
+        .set({ 
+          rank: oldRank,
+          lastUpdated: new Date()
+        })
+        .where(eq(portfolioItems.id, itemToSwap.id));
     });
   }
 }
