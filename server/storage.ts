@@ -217,46 +217,43 @@ export class DatabaseStorage implements IStorage {
 
     const oldRank = itemToUpdate.rank;
 
-    // Ensure newRank is never less than 1 or greater than total items
+    // Ensure newRank is within valid bounds (1 to number of items)
     newRank = Math.max(1, Math.min(newRank, items.length));
 
     // If ranks are the same, no need to update
     if (oldRank === newRank) return;
 
-    // Update ranks for affected items
-    if (oldRank < newRank) {
-      // Moving down - shift items up
-      for (const item of items) {
-        if (item.rank > oldRank && item.rank <= newRank) {
-          await db.update(portfolioItems)
-            .set({ 
-              rank: item.rank - 1,
-              lastUpdated: new Date()
-            })
-            .where(eq(portfolioItems.id, item.id));
-        }
+    // Begin transaction to ensure atomic updates
+    await db.transaction(async (tx) => {
+      if (oldRank < newRank) {
+        // Moving down - shift items between old and new rank up by 1
+        await tx
+          .update(portfolioItems)
+          .set({ 
+            rank: db.sql`${portfolioItems.rank} - 1`,
+            lastUpdated: new Date()
+          })
+          .where(db.sql`rank > ${oldRank} AND rank <= ${newRank}`);
+      } else {
+        // Moving up - shift items between new and old rank down by 1
+        await tx
+          .update(portfolioItems)
+          .set({ 
+            rank: db.sql`${portfolioItems.rank} + 1`,
+            lastUpdated: new Date()
+          })
+          .where(db.sql`rank >= ${newRank} AND rank < ${oldRank}`);
       }
-    } else {
-      // Moving up - shift items down
-      for (const item of items) {
-        if (item.rank >= newRank && item.rank < oldRank) {
-          await db.update(portfolioItems)
-            .set({ 
-              rank: item.rank + 1,
-              lastUpdated: new Date()
-            })
-            .where(eq(portfolioItems.id, item.id));
-        }
-      }
-    }
 
-    // Update the target item's rank
-    await db.update(portfolioItems)
-      .set({ 
-        rank: newRank,
-        lastUpdated: new Date() 
-      })
-      .where(eq(portfolioItems.id, id));
+      // Update the target item's rank
+      await tx
+        .update(portfolioItems)
+        .set({ 
+          rank: newRank,
+          lastUpdated: new Date()
+        })
+        .where(eq(portfolioItems.id, id));
+    });
   }
 }
 
