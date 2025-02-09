@@ -193,7 +193,6 @@ export class DatabaseStorage implements IStorage {
       .values({ 
         ...item,
         rank: totalItems, // Use zero-based ranking
-        allocation: "0", // Initialize allocation to 0
         lastUpdated: new Date() 
       })
       .returning();
