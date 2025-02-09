@@ -1,4 +1,4 @@
-import { Asset, InsertAsset, PortfolioItem, InsertPortfolioItem, PriceHistory, priceHistory, assets, portfolioItems } from "@shared/schema";
+import { Asset, InsertAsset, PortfolioItem, InsertPortfolioItem, assets, portfolioItems } from "@shared/schema";
 import { db } from "./db";
 import { eq, or, ilike, and, lte, desc, asc, sql } from "drizzle-orm";
 
@@ -17,9 +17,6 @@ export interface IStorage {
   createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem>;
   updatePortfolioRank(id: number, newRank: number): Promise<PortfolioItem>;
   removePortfolioItem(id: number): Promise<void>;
-
-  addPriceHistory(data: { assetId: number; price: number }): Promise<void>;
-  getPriceHistory24h(assetSymbol: string): Promise<{ price: number } | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -50,14 +47,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAsset(insertAsset: InsertAsset): Promise<Asset> {
-    const formattedPrice = Number(insertAsset.currentPrice).toFixed(8);
     const [asset] = await db.insert(assets)
       .values({ 
         ...insertAsset,
-        currentPrice: formattedPrice,
-        priceChangePercentage24h: insertAsset.priceChangePercentage24h 
-          ? Number(insertAsset.priceChangePercentage24h).toFixed(2)
-          : null,
         lastUpdated: new Date() 
       })
       .returning();
@@ -65,14 +57,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateAssetPrice(id: number, price: number, priceChangePercentage24h?: number | null): Promise<Asset> {
-    const formattedPrice = price.toFixed(8);
     const [asset] = await db
       .update(assets)
       .set({
-        currentPrice: formattedPrice,
-        priceChangePercentage24h: priceChangePercentage24h 
-          ? priceChangePercentage24h.toFixed(2)
-          : null,
+        price: price.toString(),
+        percentChange24h: priceChangePercentage24h?.toString(),
         lastUpdated: new Date()
       })
       .where(eq(assets.id, id))
@@ -140,51 +129,6 @@ export class DatabaseStorage implements IStorage {
 
   async removePortfolioItem(id: number): Promise<void> {
     await db.delete(portfolioItems).where(eq(portfolioItems.id, id));
-  }
-
-  async addPriceHistory(data: { assetId: number; price: number }): Promise<void> {
-    try {
-      await db.insert(priceHistory).values({
-        assetId: data.assetId,
-        price: data.price.toString(),
-        timestamp: new Date()
-      });
-    } catch (error) {
-      console.error('Error adding price history:', error);
-      throw error;
-    }
-  }
-
-  async getPriceHistory24h(assetSymbol: string): Promise<{ price: number } | null> {
-    try {
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-
-      const asset = await this.getAssetBySymbol(assetSymbol);
-      if (!asset) return null;
-
-      const [historicalPrice] = await db
-        .select({
-          price: priceHistory.price
-        })
-        .from(priceHistory)
-        .where(
-          and(
-            eq(priceHistory.assetId, asset.id),
-            sql`${priceHistory.timestamp} <= ${twentyFourHoursAgo}`
-          )
-        )
-        .orderBy(desc(priceHistory.timestamp))
-        .limit(1);
-
-      if (!historicalPrice) return null;
-
-      return {
-        price: Number(historicalPrice.price)
-      };
-    } catch (error) {
-      console.error('Error getting price history:', error);
-      return null;
-    }
   }
 }
 
