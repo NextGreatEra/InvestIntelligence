@@ -31,7 +31,6 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Existing Asset methods remain unchanged
   async getAssets(): Promise<Asset[]> {
     return await db.select().from(assets);
   }
@@ -100,7 +99,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(assets).where(eq(assets.id, id));
   }
 
-  // Stock methods
   async getStocks(): Promise<Stock[]> {
     return await db.select().from(stocks);
   }
@@ -181,15 +179,22 @@ export class DatabaseStorage implements IStorage {
     await db.delete(stocks).where(eq(stocks.id, id));
   }
 
-  // Portfolio methods
   async getPortfolioItemsWithAssets(): Promise<any[]> {
     return await db.select().from(portfolioItems);
   }
 
   async createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem> {
+    // Get current number of portfolio items
+    const portfolioItems = await db.select().from(portfolioItems);
+    const totalItems = portfolioItems.length;
+
+    // New item gets lowest allocation initially
+    const allocation = totalItems === 0 ? 100 : Math.round(100 / (totalItems + 1));
+
     const [portfolioItem] = await db.insert(portfolioItems)
       .values({ 
         ...item,
+        allocation: allocation.toString(),
         lastUpdated: new Date() 
       })
       .returning();
@@ -201,8 +206,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePortfolioRank(id: number, rank: number): Promise<void> {
+    // Get total number of portfolio items to calculate allocation
+    const portfolioItems = await db.select().from(portfolioItems);
+    const totalItems = portfolioItems.length;
+
+    // Calculate allocation based on rank (higher rank = higher allocation)
+    // For example: rank 0 gets 100/(totalItems) * (totalItems) = 100%
+    //             rank 1 gets 100/(totalItems) * (totalItems-1)
+    const allocation = totalItems === 1 ? 100 : 
+      Math.round((totalItems - rank) * (100 / totalItems));
+
     await db.update(portfolioItems)
-      .set({ rank, lastUpdated: new Date() })
+      .set({ 
+        rank,
+        allocation: allocation.toString(),
+        lastUpdated: new Date() 
+      })
       .where(eq(portfolioItems.id, id));
   }
 }

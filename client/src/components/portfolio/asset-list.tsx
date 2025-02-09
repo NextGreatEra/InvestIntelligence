@@ -153,9 +153,6 @@ export default function AssetList() {
       <CardContent>
         <div className="space-y-4">
           {sortedPortfolioItems.map((item, index) => {
-            const allocation = totalItems === 1 ? 100 :
-              Math.round((totalItems - index) * (100 / totalItems));
-
             const priceChange = getPercentChange(item.asset);
 
             return (
@@ -209,7 +206,7 @@ export default function AssetList() {
                     <h3 className="font-medium">
                       {item.asset.symbol.toUpperCase()}
                       <span className="ml-2 text-sm text-muted-foreground">
-                        ({allocation}%)
+                        ({parseFloat(item.allocation).toFixed(0)}%)
                       </span>
                     </h3>
                     <p className="text-sm text-muted-foreground">{item.asset.name}</p>
