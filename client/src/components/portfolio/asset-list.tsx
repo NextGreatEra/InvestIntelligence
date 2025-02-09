@@ -206,7 +206,7 @@ export default function AssetList() {
                     <h3 className="font-medium">
                       {item.asset.symbol.toUpperCase()}
                       <span className="ml-2 text-sm text-muted-foreground">
-                        (Portfolio Allocation Rank #{item.rank + 1})
+                        (Portfolio Allocation Rank #{item.rank})
                       </span>
                     </h3>
                     <p className="text-sm text-muted-foreground">{item.asset.name}</p>
