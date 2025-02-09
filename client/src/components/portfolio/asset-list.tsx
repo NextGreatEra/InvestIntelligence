@@ -110,43 +110,19 @@ export default function AssetList() {
     const currentItem = portfolioItems[currentIndex];
     const targetItem = portfolioItems[newIndex];
 
-    // Calculate the new ranks
-    if (direction === 'up') {
-      // Moving up: decrease current item's rank, increase ranks of items in between
-      await updateRankMutation.mutateAsync({ 
-        id: currentItem.id, 
-        newRank: targetItem.rank 
+    try {
+      // Simply update to the target rank - backend will handle reordering
+      await updateRankMutation.mutateAsync({
+        id: currentItem.id,
+        newRank: targetItem.rank + (direction === 'up' ? 0 : 1) //Corrected this line
       });
-
-      // Update ranks of affected items
-      const itemsToUpdate = portfolioItems
-        .filter(item => item.rank >= targetItem.rank && item.rank < currentItem.rank)
-        .sort((a, b) => a.rank - b.rank);
-
-      for (const item of itemsToUpdate) {
-        await updateRankMutation.mutateAsync({
-          id: item.id,
-          newRank: item.rank + 1
-        });
-      }
-    } else {
-      // Moving down: increase current item's rank, decrease ranks of items in between
-      await updateRankMutation.mutateAsync({ 
-        id: currentItem.id, 
-        newRank: targetItem.rank +1
+    } catch (error) {
+      console.error('Error moving asset:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update asset ranking",
+        variant: "destructive",
       });
-
-      // Update ranks of affected items
-      const itemsToUpdate = portfolioItems
-        .filter(item => item.rank <= targetItem.rank && item.rank > currentItem.rank)
-        .sort((a, b) => b.rank - a.rank);
-
-      for (const item of itemsToUpdate) {
-        await updateRankMutation.mutateAsync({
-          id: item.id,
-          newRank: item.rank - 1
-        });
-      }
     }
   };
 
