@@ -37,7 +37,7 @@ export function registerRoutes(app: Express) {
   });
 
   app.get('/api/assets/search', async (req, res) => {
-    const { q, type } = req.query;
+    const { q } = req.query;
     if (typeof q !== 'string') {
       return res.status(400).json({ message: 'Search query is required' });
     }
@@ -45,27 +45,33 @@ export function registerRoutes(app: Express) {
     try {
       let results = [];
 
-      // If type is not specified or is 'stock', search for stocks
-      if (!type || type === 'stock') {
-        const stockResults = await searchStocks(q);
-        results.push(...stockResults);
-      }
+      // Search in our assets (crypto) table
+      const cryptoResults = await storage.searchAssets(q);
+      const formattedCryptoResults = cryptoResults.map(asset => ({
+        id: asset.id.toString(),
+        symbol: asset.symbol,
+        name: asset.name,
+        current_price: parseFloat(asset.price),
+        percent_change_1h: asset.percentChange1h ? parseFloat(asset.percentChange1h) : null,
+        percent_change_24h: asset.percentChange24h ? parseFloat(asset.percentChange24h) : null,
+        percent_change_7d: asset.percentChange7d ? parseFloat(asset.percentChange7d) : null,
+        type: 'crypto'
+      }));
 
-      // If type is not specified or is 'crypto', search in our database
-      if (!type || type === 'crypto') {
-        const cryptoResults = await storage.searchAssets(q);
-        const formattedCryptoResults = cryptoResults.map(asset => ({
-          id: asset.id.toString(),
-          symbol: asset.symbol,
-          name: asset.name,
-          current_price: parseFloat(asset.price),
-          percent_change_1h: asset.percentChange1h ? parseFloat(asset.percentChange1h) : null,
-          percent_change_24h: asset.percentChange24h ? parseFloat(asset.percentChange24h) : null,
-          percent_change_7d: asset.percentChange7d ? parseFloat(asset.percentChange7d) : null,
-          type: 'crypto'
-        }));
-        results.push(...formattedCryptoResults);
-      }
+      // Search in our stocks table
+      const stockResults = await storage.searchStocks(q);
+      const formattedStockResults = stockResults.map(stock => ({
+        id: stock.id.toString(),
+        symbol: stock.symbol,
+        name: stock.description,
+        current_price: parseFloat(stock.c),
+        percent_change_24h: stock.dp ? parseFloat(stock.dp) : null,
+        type: 'stock'
+      }));
+
+      // Combine and sort results by symbol alphabetically
+      results = [...formattedCryptoResults, ...formattedStockResults]
+        .sort((a, b) => a.symbol.localeCompare(b.symbol));
 
       res.json(results);
     } catch (error) {

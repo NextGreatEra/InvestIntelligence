@@ -13,6 +13,7 @@ interface AssetSearchResult {
   percent_change_1h?: number;
   percent_change_24h?: number;
   percent_change_7d?: number;
+  type: 'crypto' | 'stock';
 }
 
 interface AssetSearchProps {
@@ -99,14 +100,14 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
         <DialogHeader>
           <DialogTitle>Add Asset to Portfolio</DialogTitle>
           <DialogDescription>
-            Search for a cryptocurrency by name or symbol to add it to your portfolio.
+            Search for an asset by name or symbol to add it to your portfolio.
           </DialogDescription>
         </DialogHeader>
 
         <div className="mt-4">
           <Command shouldFilter={false} className="rounded-lg border shadow-md">
             <CommandInput
-              placeholder="Search assets... (e.g. Bitcoin)"
+              placeholder="Search assets... (e.g. Bitcoin, AAPL)"
               value={search}
               onValueChange={handleSearchChange}
               className="border-none focus:ring-0"
@@ -132,9 +133,14 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
                       onSelect={() => handleSelect(asset)}
                       className="flex justify-between items-center"
                     >
-                      <div>
-                        <span className="font-medium">{asset.symbol.toUpperCase()}</span>
-                        <span className="ml-2 text-muted-foreground">{asset.name}</span>
+                      <div className="flex items-center">
+                        <div>
+                          <span className="font-medium">{asset.symbol.toUpperCase()}</span>
+                          <span className="ml-2 text-muted-foreground">{asset.name}</span>
+                          {asset.type === 'crypto' && (
+                            <span className="ml-2 text-sm text-muted-foreground">(Crypto)</span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center space-x-4">
                         <span className="text-sm">
