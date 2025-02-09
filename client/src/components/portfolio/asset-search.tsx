@@ -62,14 +62,14 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
     setMetricIndex((prev) => (prev + 1) % metrics.length);
   }, []);
 
-  const getPercentChange = (asset: AssetSearchResult) => {
+  const getPercentChange = (asset: AssetSearchResult): number | null => {
     switch(currentMetric) {
       case '1h':
-        return asset.percent_change_1h;
+        return asset.percent_change_1h ?? null;
       case '24h':
-        return asset.percent_change_24h;
+        return asset.percent_change_24h ?? null;
       case '7d':
-        return asset.percent_change_7d;
+        return asset.percent_change_7d ?? null;
       default:
         return null;
     }
@@ -151,13 +151,17 @@ const AssetSearch = ({ onSelect, open, onOpenChange }: AssetSearchProps) => {
                           }}
                           className="px-2 py-1 text-xs rounded hover:bg-accent"
                         >
-                          {getPercentChange(asset) !== null ? (
-                            <span className={getPercentChange(asset)! >= 0 ? "text-green-500" : "text-red-500"}>
-                              {getPercentChange(asset)!.toFixed(2)}% ({currentMetric})
-                            </span>
-                          ) : (
-                            <span className="text-muted">N/A ({currentMetric})</span>
-                          )}
+                          {(() => {
+                            const change = getPercentChange(asset);
+                            if (change === null) {
+                              return <span className="text-muted">N/A ({currentMetric})</span>;
+                            }
+                            return (
+                              <span className={change >= 0 ? "text-green-500" : "text-red-500"}>
+                                {change.toFixed(2)}% ({currentMetric})
+                              </span>
+                            );
+                          })()}
                         </button>
                       </div>
                     </CommandItem>
