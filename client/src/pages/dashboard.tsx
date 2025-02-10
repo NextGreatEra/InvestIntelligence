@@ -24,7 +24,12 @@ export default function Dashboard() {
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      await apiRequest("/api/refresh", { method: "POST" });
+      await fetch('/api/refresh', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
 
       // Invalidate queries to refetch fresh data
       await Promise.all([
