@@ -371,35 +371,38 @@ export function registerRoutes(app: Express) {
   // Add the new refresh endpoint
   app.post('/api/refresh', async (req, res) => {
     try {
-      // Get all portfolio items and market data
-      const [portfolioItems, marketAssets] = await Promise.all([
-        storage.getPortfolioItemsWithAssets(),
-        (async () => {
-          const assets = await storage.getAssets();
-          const cryptoMarkets = assets
-            .filter(coin => ['BTC', 'ETH'].includes(coin.symbol));
-          const stockSymbols = ['SPY', 'QQQ'];
-          const stocks = await Promise.all(
-            stockSymbols.map(symbol => storage.getStockBySymbol(symbol))
-          );
-          return { cryptoMarkets, stocks: stocks.filter(Boolean) };
-        })()
-      ]);
+      // Get all portfolio items
+      const portfolioItems = await storage.getPortfolioItemsWithAssets();
 
-      // Get unique crypto symbols
+      // Get market assets
+      const assets = await storage.getAssets();
+      const cryptoMarkets = assets.filter(coin => ['BTC', 'ETH'].includes(coin.symbol));
+      const stockSymbols = ['SPY', 'QQQ'];
+
+      // Get unique crypto symbols from both portfolio and markets
       const cryptoSymbols = new Set([
-        ...marketAssets.cryptoMarkets.map(c => c.symbol),
-        ...portfolioItems
-          .filter(item => item.assetType === 'crypto')
-          .map(item => item.asset.symbol)
+        ...cryptoMarkets.map(c => c.symbol),
+        ...(await Promise.all(
+          portfolioItems
+            .filter(item => item.assetType === 'crypto')
+            .map(async item => {
+              const asset = await storage.getAssetById(item.assetId);
+              return asset.symbol;
+            })
+        ))
       ]);
 
-      // Get unique stock symbols
-      const stockSymbols = new Set([
-        ...marketAssets.stocks.map(s => s.symbol),
-        ...portfolioItems
-          .filter(item => item.assetType === 'stock')
-          .map(item => item.asset.symbol)
+      // Get unique stock symbols from both portfolio and markets
+      const stockSymbolSet = new Set([
+        ...stockSymbols,
+        ...(await Promise.all(
+          portfolioItems
+            .filter(item => item.assetType === 'stock')
+            .map(async item => {
+              const stock = await storage.getStockById(item.assetId);
+              return stock.symbol;
+            })
+        ))
       ]);
 
       // Update crypto prices
@@ -421,10 +424,10 @@ export function registerRoutes(app: Express) {
       }
 
       // Update stock prices
-      if (stockSymbols.size > 0) {
+      if (stockSymbolSet.size > 0) {
         const { getStockPrice } = await import('./lib/finnhub');
         await Promise.all(
-          Array.from(stockSymbols).map(async symbol => {
+          Array.from(stockSymbolSet).map(async symbol => {
             try {
               const { price, priceChange } = await getStockPrice(symbol);
               await storage.updateStock(symbol, price, priceChange);
