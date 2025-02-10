@@ -63,7 +63,19 @@ export async function generatePortfolioInsight(data: MarketData) {
         {
           role: "user",
           content: `Portfolio data: ${JSON.stringify(data.portfolioItems)}
-          Market overview: ${JSON.stringify(data.marketAssets)}`
+          Market overview: ${data.marketAssets.map(asset => ({
+            symbol: asset.symbol,
+            name: asset.name,
+            current_price: asset.current_price,
+            changes: asset.type === 'crypto' ? {
+              '1h': asset.percent_change_1h,
+              '24h': asset.percent_change_24h,
+              '7d': asset.percent_change_7d
+            } : {
+              '24h': asset.percent_change_24h
+            },
+            type: asset.type
+          }))}`
         }
       ],
       temperature: 0.7,
