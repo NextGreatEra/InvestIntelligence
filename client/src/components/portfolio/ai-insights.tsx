@@ -35,8 +35,7 @@ export default function AiInsights() {
       const response = await fetch(`/api/portfolio/insight${selectedPersona !== "default" ? `?persona=${selectedPersona}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch insights');
       return response.json();
-    },
-    staleTime: Infinity
+    }
   });
 
   return (
@@ -70,8 +69,11 @@ export default function AiInsights() {
         ) : (
           <div className="space-y-4">
             <div className="space-y-2">
-              <p className="text-lg font-medium">{insight?.message}</p>
-              
+              {typeof insight?.message === 'string' ? (
+                <p className="text-lg font-medium">{insight.message}</p>
+              ) : (
+                <p className="text-lg font-medium">Loading insights...</p>
+              )}
             </div>
             {insight?.disclaimer && (
               <p className="text-xs text-muted-foreground mt-4 border-t pt-2">

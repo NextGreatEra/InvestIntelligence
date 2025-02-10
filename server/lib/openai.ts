@@ -42,16 +42,24 @@ export async function generatePortfolioInsight(data: MarketData) {
         : "";
 
     const systemPrompt = personaPrompt +
-      "You are a witty financial analyst providing market commentary comparing the user's portfolio to the broader market. " +
-      "Do not provide financial, investment, legal, or tax advice. " +
-      "Your tone is natural, conversational, and indistinguishable from a savvy human expert. " +
-      "Avoid any language that reveals you're an AI—no 'as an AI,' 'I am just a language model,' or robotic bullshit. " +
-      "Keep your response short, punchy, and tweet-like (280 characters or less). " +
-      "Whenever you mention a price change, include a timeframe (e.g., 'in the last 24hr' or 'over the past week'). " +
-      "Analyze the user's portfolio in depth: if holdings are confined to one sector or if most stocks fall within similar industries (like all crypto-related or tech), throw in a witty dig about the lack of true diversification; if the portfolio is diversified across industries, celebrate that. " +
-      "If overall performance is negative, avoid hyping it up as 'hot' or 'winning'—stay real about the losses. " +
-      "Also, if one asset bucks the trend (for example, while most assets are down, a lower-ranked asset is up), call it out explicitly with a comment like 'hey, i bet you wish you had more of [asset]!' " +
-      "Format your response as: { 'message': 'your witty insight', 'sentiment': 'bullish/bearish/neutral', 'disclaimer': 'standard disclaimer' }";
+      `You are a witty financial analyst providing market commentary comparing the user's portfolio to the broader market.
+      Your task is to return a JSON object with exactly these fields:
+      {
+        "message": "your witty insight here",
+        "sentiment": "bullish/bearish/neutral",
+        "disclaimer": "standard disclaimer"
+      }
+
+      Guidelines:
+      - Keep the message short and punchy (280 chars max)
+      - Use natural, conversational tone
+      - Include timeframes for price changes
+      - Comment on portfolio diversity
+      - Be honest about losses
+      - Point out any standout performers
+
+      DO NOT use single quotes in the JSON response, use double quotes.
+      DO NOT include any additional fields or formatting.`;
 
     const response = await ai.chat.completions.create({
       model: "gpt-4",
@@ -70,16 +78,25 @@ export async function generatePortfolioInsight(data: MarketData) {
     });
 
     const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("Empty response from OpenAI");
+    }
 
-    // Try to parse as JSON, fall back to creating a structured response if parsing fails
+    // Clean up any potential single quotes and ensure proper JSON formatting
+    const cleanContent = content
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/'/g, '"')
+      .trim();
+
     try {
-      return JSON.parse(content);
+      return JSON.parse(cleanContent);
     } catch (parseError) {
-      // If the response isn't valid JSON, create a structured response
+      console.error("Failed to parse OpenAI response:", cleanContent);
       return {
-        message: content.split('.')[0], // Take the first sentence
-        sentiment: content.toLowerCase().includes('up') || content.toLowerCase().includes('gain') ? 'bullish' : 
-                  content.toLowerCase().includes('down') || content.toLowerCase().includes('loss') ? 'bearish' : 'neutral',
+        message: cleanContent.split('.')[0],
+        sentiment: cleanContent.toLowerCase().includes('up') || cleanContent.toLowerCase().includes('gain') ? 'bullish' : 
+                  cleanContent.toLowerCase().includes('down') || cleanContent.toLowerCase().includes('loss') ? 'bearish' : 'neutral',
         disclaimer: "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
       };
     }
