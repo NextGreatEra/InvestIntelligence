@@ -308,9 +308,9 @@ export function registerRoutes(app: Express) {
           symbol: coin.symbol,
           name: coin.name,
           current_price: parseFloat(coin.price),
-          percent_change_1h: coin.percentChange1h ? parseFloat(coin.percentChange1h) : null,
-          percent_change_24h: coin.percentChange24h ? parseFloat(coin.percentChange24h) : null,
-          percent_change_7d: coin.percentChange7d ? parseFloat(coin.percentChange7d) : null,
+          percent_change_1h: parseFloat(coin.percentChange1h || '0'),
+          percent_change_24h: parseFloat(coin.percentChange24h || '0'),
+          percent_change_7d: parseFloat(coin.percentChange7d || '0'),
           type: 'crypto'
         }));
 
