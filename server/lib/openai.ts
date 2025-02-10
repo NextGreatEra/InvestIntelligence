@@ -36,6 +36,12 @@ const personas = {
 
 export async function generatePortfolioInsight(data: MarketData) {
   try {
+    console.log('=== OpenAI API Debug Log ===');
+    console.log('Portfolio Items:', JSON.stringify(data.portfolioItems, null, 2));
+    console.log('Market Assets:', JSON.stringify(data.marketAssets, null, 2));
+    console.log('Market Summary:', JSON.stringify(data.marketSummary, null, 2));
+    console.log('Selected Persona:', data.persona || 'default');
+    
     const personaPrompt =
       data.persona && personas[data.persona as keyof typeof personas]
         ? personas[data.persona as keyof typeof personas] + "\n\n"
