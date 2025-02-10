@@ -303,6 +303,12 @@ export function registerRoutes(app: Express) {
         .filter((coin, index, self) =>
           index === self.findIndex((t) => t.symbol === coin.symbol)
         )
+        // Sort to ensure BTC comes first
+        .sort((a, b) => {
+          if (a.symbol === 'BTC') return -1;
+          if (b.symbol === 'BTC') return 1;
+          return 0;
+        })
         .map(coin => ({
           id: coin.id.toString(),
           symbol: coin.symbol,
