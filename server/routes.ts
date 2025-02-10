@@ -74,8 +74,25 @@ export function registerRoutes(app: Express) {
 
       try {
         const insights = await generatePortfolioInsight({
-          portfolioItems,
-          marketAssets,
+          portfolioItems: portfolioItems.map(item => ({
+            ...item,
+            assetName: item.asset.name,
+            symbol: item.asset.symbol
+          })),
+          marketAssets: marketAssets.map(asset => ({
+            symbol: asset.symbol,
+            name: asset.name, // This is either the company name for stocks or asset name for crypto
+            current_price: asset.current_price,
+            changes: asset.type === 'crypto' ? {
+              '1h': asset.percent_change_1h,
+              '24h': asset.percent_change_24h,
+              '7d': asset.percent_change_7d
+            } : {
+              '24h': asset.percent_change_24h
+            },
+            type: asset.type,
+            fullName: asset.type === 'stock' ? asset.description : asset.name // Add full name explicitly
+          })),
           persona
         });
         res.json(insights);

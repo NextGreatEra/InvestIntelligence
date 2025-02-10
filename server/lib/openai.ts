@@ -53,11 +53,12 @@ export async function generatePortfolioInsight(data: MarketData) {
           Mention timeframes for price changes (e.g., 'in the last 24hr').
           Comment on portfolio diversity and point out any standout performers.
           Be honest about losses - don't hype up negative performance.
-          Always reference assets by their ticker or company name, not ID number. 
+          Use the full company/asset names when first mentioning them, then you can use their ticker symbols.
+          Always reference assets by their full name (e.g., 'Bitcoin' instead of just 'BTC') at least once in the message.
 
           Structure your response EXACTLY as valid JSON like this example:
           {
-            "message": "Your portfolio's spicier than a Wall Street lunch meeting! BTC up 2% in 24hr while ETH's taking a power nap. Diversification game strong!",
+            "message": "Your Bitcoin (BTC) and Tesla Inc (TSLA) holdings are leading the charge! BTC up 2% in 24hr while TSLA's taking a power nap. Portfolio diversification game strong!",
             "sentiment": "bullish",
             "disclaimer": "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
           }`
