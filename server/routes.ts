@@ -298,7 +298,7 @@ export function registerRoutes(app: Express) {
       // Fetch top crypto assets directly from storage
       const assets = await storage.getAssets();
       const cryptoMarkets = assets
-        .filter(coin => ['ETH'].includes(coin.symbol))
+        .filter(coin => ['BTC', 'ETH'].includes(coin.symbol))
         // Add distinct check to prevent duplicates
         .filter((coin, index, self) =>
           index === self.findIndex((t) => t.symbol === coin.symbol)
