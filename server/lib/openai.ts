@@ -37,15 +37,23 @@ const personas = {
 export async function generatePortfolioInsight(data: MarketData) {
   try {
     console.log('=== OpenAI API Debug Log ===');
+    console.log('Input Data Structure:', {
+      portfolioItemsLength: data.portfolioItems?.length || 0,
+      marketAssetsLength: data.marketAssets?.length || 0,
+      persona: data.persona || 'default'
+    });
     console.log('Portfolio Items:', JSON.stringify(data.portfolioItems, null, 2));
     console.log('Market Assets:', JSON.stringify(data.marketAssets, null, 2));
-    console.log('Market Summary:', JSON.stringify(data.marketSummary, null, 2));
-    console.log('Selected Persona:', data.persona || 'default');
-    
+
     const personaPrompt =
       data.persona && personas[data.persona as keyof typeof personas]
         ? personas[data.persona as keyof typeof personas] + "\n\n"
         : "";
+
+    // Add validation for required data
+    if (!Array.isArray(data.portfolioItems) || !Array.isArray(data.marketAssets)) {
+      throw new Error('Invalid data structure: portfolioItems and marketAssets must be arrays');
+    }
 
     const response = await ai.chat.completions.create({
       model: "gpt-4",
@@ -57,9 +65,9 @@ export async function generatePortfolioInsight(data: MarketData) {
           Focus on things the user might not know if they have not been paying attention to the market.
           If there's been a price change of greater than 5% it's probably worth mentioning, if the price change is 10% or greater definitely mention it, if the price change is over 15% yell about it.  
           Mention timeframes for price changes (e.g., 'in the last 24hr').
-          Occaisionally comment on portfolio diversity and point out any standout performers.
+          Occasionally comment on portfolio diversity and point out any standout performers.
           Be honest about losses - don't hype up negative performance.
-          Always reference assets by their ticker or company name, not ID number. 
+          Always reference assets by their ticker or company name, not ID number.
 
           Structure your response EXACTLY as valid JSON like this example:
           {
@@ -70,20 +78,27 @@ export async function generatePortfolioInsight(data: MarketData) {
         },
         {
           role: "user",
-          content: `Portfolio data: ${JSON.stringify(data.portfolioItems)}
-          Market overview: ${data.marketAssets.map(asset => ({
-            symbol: asset.symbol,
-            name: asset.name,
-            current_price: asset.current_price,
-            changes: asset.type === 'crypto' ? {
-              '1h': asset.percent_change_1h,
-              '24h': asset.percent_change_24h,
-              '7d': asset.percent_change_7d
-            } : {
-              '24h': asset.percent_change_24h
-            },
-            type: asset.type
-          }))}`
+          content: JSON.stringify({
+            portfolio: data.portfolioItems.map(item => ({
+              symbol: item.symbol,
+              type: item.type,
+              currentPrice: item.currentPrice,
+              changes: item.percentChange
+            })),
+            market: data.marketAssets.map(asset => ({
+              symbol: asset.symbol,
+              name: asset.name,
+              current_price: asset.current_price,
+              changes: asset.type === 'crypto' ? {
+                '1h': asset.percent_change_1h,
+                '24h': asset.percent_change_24h,
+                '7d': asset.percent_change_7d
+              } : {
+                '24h': asset.percent_change_24h
+              },
+              type: asset.type
+            }))
+          })
         }
       ],
       temperature: 0.7,
@@ -92,11 +107,16 @@ export async function generatePortfolioInsight(data: MarketData) {
 
     const content = response.choices[0].message.content;
     if (!content) {
+      console.error("Empty response content from OpenAI");
       throw new Error("Empty response from OpenAI");
     }
 
     try {
       const parsedResponse = JSON.parse(content.trim());
+      if (!parsedResponse.message || !parsedResponse.sentiment) {
+        console.error("Invalid response structure:", parsedResponse);
+        throw new Error("Invalid response structure from OpenAI");
+      }
       return {
         message: parsedResponse.message,
         sentiment: parsedResponse.sentiment,
@@ -107,7 +127,10 @@ export async function generatePortfolioInsight(data: MarketData) {
       throw new Error("Invalid response format from OpenAI");
     }
   } catch (error) {
-    console.error("OpenAI API error:", error);
+    console.error("OpenAI API error:", error instanceof Error ? error.message : 'Unknown error');
+    if (error instanceof Error) {
+      console.error("Error stack:", error.stack);
+    }
     throw error;
   }
 }
