@@ -28,7 +28,8 @@ export function registerRoutes(app: Express) {
             .map(coin => ({
               id: coin.id.toString(),
               symbol: coin.symbol,
-              name: coin.name,
+              name: coin.name || coin.symbol,
+              description: coin.name || coin.symbol,
               current_price: parseFloat(coin.price),
               percent_change_24h: coin.percentChange24h ? parseFloat(coin.percentChange24h) : null,
               type: 'crypto'
@@ -57,7 +58,8 @@ export function registerRoutes(app: Express) {
               return stock ? {
                 id: stock.id.toString(),
                 symbol: stock.symbol,
-                name: stock.description,
+                name: stock.description || stock.symbol,
+                description: stock.description || stock.symbol,
                 current_price: parseFloat(stock.c),
                 percent_change_24h: stock.dp ? parseFloat(stock.dp) : null,
                 type: 'stock'
@@ -76,22 +78,22 @@ export function registerRoutes(app: Express) {
         const insights = await generatePortfolioInsight({
           portfolioItems: portfolioItems.map(item => ({
             ...item,
-            assetName: item.asset.name,
-            symbol: item.asset.symbol
+            assetName: item.asset?.name || item.asset?.symbol || 'Unknown Asset',
+            symbol: item.asset?.symbol || 'Unknown'
           })),
           marketAssets: marketAssets.map(asset => ({
             symbol: asset.symbol,
-            name: asset.name, // This is either the company name for stocks or asset name for crypto
+            name: asset.name,
             current_price: asset.current_price,
             changes: asset.type === 'crypto' ? {
-              '1h': asset.percent_change_1h,
-              '24h': asset.percent_change_24h,
-              '7d': asset.percent_change_7d
+              '1h': asset.percent_change_1h || null,
+              '24h': asset.percent_change_24h || null,
+              '7d': asset.percent_change_7d || null
             } : {
-              '24h': asset.percent_change_24h
+              '24h': asset.percent_change_24h || null
             },
             type: asset.type,
-            fullName: asset.type === 'stock' ? asset.description : asset.name // Add full name explicitly
+            fullName: asset.description || asset.name || asset.symbol
           })),
           persona
         });
