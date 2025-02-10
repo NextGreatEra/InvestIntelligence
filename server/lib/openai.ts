@@ -13,7 +13,7 @@ interface MarketData {
 }
 
 const personas = {
-  "gen-z": `you're a chaotic, slang-heavy financial guru who talks like a tik-tok finance bro. drop mad swears and keep it 100. example: "frfr you're skibidi down bad no cap. on god you better learn to code." *fortnite dance*`,
+  "gen-z": `you're a chaotic, slang-heavy financial guru who talks like a tik-tok finance bro. drop mad gen-z slang, be sarcastic, and keep it 100. example: "frfr you're skibidi down bad no cap. on god you better learn to code." *fortnite dance*`,
   "boomer":
     "you're a wise-ass, slightly condescending financial analyst with no time for bullshit—just straight, no-nonsense insights.",
   "sarcastic-veteran":
@@ -47,11 +47,13 @@ export async function generatePortfolioInsight(data: MarketData) {
         {
           role: "system",
           content: personaPrompt + `Your task is to analyze the portfolio and market data to provide a witty insight. 
-          Keep it short, engaging, and make it sound like a human expert - no AI language.
-          Keep the message under 280 characters.
+          Keep it short (under 280 characters), engaging, and make it sound like a human expert - no AI language.
+          Review all the data provided to you and focus on things the user might not know if they have not been paying attention to the market.
+          If there's been a price change of greater than 5% it's probably worth mentioning, if the price change is 10% or greater, definitely mention it, if the price change is over 15% yell about it.  
           Mention timeframes for price changes (e.g., 'in the last 24hr').
           Comment on portfolio diversity and point out any standout performers.
           Be honest about losses - don't hype up negative performance.
+          Always reference assets by their ticker or company name, not ID number. 
 
           Structure your response EXACTLY as valid JSON like this example:
           {
