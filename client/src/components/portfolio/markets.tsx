@@ -46,13 +46,16 @@ export default function Markets() {
   const stockMarkets = markets.filter(m => stockSymbols.includes(m.symbol));
 
   const getPercentChange = (market: MarketData): number | null => {
+    if (market.type !== 'crypto') {
+      return market.percent_change_24h;
+    }
     switch(currentMetric) {
       case '1h':
-        return market.percent_change_1h ?? null;
+        return market.percent_change_1h !== undefined ? market.percent_change_1h : null;
       case '24h':
-        return market.percent_change_24h ?? null;
+        return market.percent_change_24h !== undefined ? market.percent_change_24h : null;
       case '7d':
-        return market.percent_change_7d ?? null;
+        return market.percent_change_7d !== undefined ? market.percent_change_7d : null;
       default:
         return null;
     }
