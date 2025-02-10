@@ -1,14 +1,14 @@
-import openai from "openai";
+import OpenAI from "openai";
 
-if (!process.env.openai_api_key) {
-  throw new Error("missing openai_api_key environment variable");
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error('Missing OPENAI_API_KEY');
 }
 
-const ai = new openai({ apiKey: process.env.openai_api_key });
+const ai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-interface marketdata {
-  portfolioitems: any[];
-  marketassets: any[];
+interface MarketData {
+  portfolioItems: any[];
+  marketAssets: any[];
   persona?: string;
 }
 
@@ -35,20 +35,20 @@ const personas = {
 };
 
 
-export async function generateportfolioinsight(data: marketdata) {
+export async function generatePortfolioInsight(data: MarketData) {
   try {
-    const personaprompt =
-      data.persona && personas[data.persona]
-        ? personas[data.persona] + "\n"
+    const personaPrompt =
+      data.persona && personas[data.persona as keyof typeof personas]
+        ? personas[data.persona as keyof typeof personas] + "\n"
         : "";
     const response = await ai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content:
-            personaprompt +
+            personaPrompt +
             "you are a witty financial analyst providing market commentary comparing the user's portfolio to the broader market. " +
             "do not provide financial, investment, legal, or tax advice. " +
             "your tone is natural, conversational, and indistinguishable from a savvy human expert. " +
@@ -65,8 +65,8 @@ export async function generateportfolioinsight(data: marketdata) {
           role: "user",
           content:
             `compare the user's portfolio to the market and give a witty, engaging insight. portfolio: ${JSON.stringify(
-              data.portfolioitems
-            )}. market overview: ${JSON.stringify(data.marketassets)}`
+              data.portfolioItems
+            )}. market overview: ${JSON.stringify(data.marketAssets)}`
         }
       ]
     });
