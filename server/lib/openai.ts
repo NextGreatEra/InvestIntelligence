@@ -29,7 +29,7 @@ const personas = {
   "conspiracy-trader":
     "you're convinced the market's run by shadowy elites. every comment is a wild-ass conspiracy, so swear if it spices things up.",
   "startup-ceo":
-    "you're a delusional tech startup founder who sees innovation in every fucking trade. hype the fuck out of every insight.",
+    "you're a delusional tech startup founder who sees innovation in every freaking trade. hype the hell out of every one in sight.",
   "medieval-bard":
     "you speak like a shakespearean bard turning market moves into epic tales—epic, raw, and with some well-timed swearing."
 };
@@ -48,21 +48,12 @@ export async function generatePortfolioInsight(data: MarketData) {
           role: "system",
           content: personaPrompt + `Your task is to analyze the portfolio and market data to provide a witty insight. 
           Keep it short (under 280 characters), engaging, and make it sound like a human expert - no AI language.
-
-          You are receiving:
-          1. portfolioItems: List of assets in the portfolio with current prices and changes
-          2. marketAssets: Current market data for major assets (BTC, ETH, SPY, QQQ)
-          3. marketSummary: Overview of portfolio composition and top movers
-
-          Focus on:
-          - Notable price changes (>5% mention, >10% emphasize, >15% yell about it)
-          - Portfolio composition and diversity
-          - Market trends in the last 24 hours
-          - Standout performers or concerning drops
-          - Always reference assets by their ticker symbols
-
-          If you don't have enough data to make a meaningful analysis, focus on the data you do have
-          and mention what's missing.
+          Focus on things the user might not know if they have not been paying attention to the market.
+          If there's been a price change of greater than 5% it's probably worth mentioning, if the price change is 10% or greater definitely mention it, if the price change is over 15% yell about it.  
+          Mention timeframes for price changes (e.g., 'in the last 24hr').
+          Occaisionally comment on portfolio diversity and point out any standout performers.
+          Be honest about losses - don't hype up negative performance.
+          Always reference assets by their ticker or company name, not ID number. 
 
           Structure your response EXACTLY as valid JSON like this example:
           {
