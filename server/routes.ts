@@ -71,17 +71,26 @@ export function registerRoutes(app: Express) {
       ]);
 
       const { generatePortfolioInsight } = await import('./lib/openai');
-      const insights = await generatePortfolioInsight({
-        portfolioItems,
-        marketAssets,
-        persona
-      });
 
-      res.json(insights);
+      try {
+        const insights = await generatePortfolioInsight({
+          portfolioItems,
+          marketAssets,
+          persona
+        });
+        res.json(insights);
+      } catch (error) {
+        console.error('Error generating portfolio insight:', error);
+        res.json({
+          message: "Your portfolio's showing more moves than a chess grandmaster! I'll have a deeper analysis ready in a moment.",
+          sentiment: "neutral",
+          disclaimer: "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
+        });
+      }
     } catch (error) {
-      console.error('Error generating portfolio insight:', error);
+      console.error('Error in portfolio insight route:', error);
       res.status(500).json({
-        message: "Failed to generate portfolio insight",
+        message: "Systems running hot like crypto in a bull market! Give me a minute to cool down.",
         sentiment: "neutral",
         disclaimer: "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
       });

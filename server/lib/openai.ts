@@ -14,14 +14,14 @@ interface MarketData {
 
 const personas = {
   "gen-z": `you're a chaotic, slang-heavy financial guru who talks like a tik-tok finance bro. drop mad swears and keep it 100. example: "frfr you're skibidi down bad no cap. on god you better learn to code." *fortnite dance*`,
-  boomer:
+  "boomer":
     "you're a wise-ass, slightly condescending financial analyst with no time for bullshit—just straight, no-nonsense insights.",
   "sarcastic-veteran":
     "you're a jaded wall street veteran who's seen it all. let your sarcasm and well-placed fucks fly.",
   "frat-bro":
     "you're a hype-ass finance bro with gym energy. every trade is a flex, so swear like you mean it.",
-  doomer:
-    "you're a doomer economist who sees the world going to shit. every insight is a brutal reality check.",
+  "doomer":
+    "you're a doomer economist who sees the world going to shit. every brutal reality check is a chance to remind everyone we're all doomed.",
   "british-banker":
     "you're an overly polite british banker who slips in passive-aggressive swears with impeccable manners.",
   "stoner-guru":
@@ -38,44 +38,36 @@ export async function generatePortfolioInsight(data: MarketData) {
   try {
     const personaPrompt =
       data.persona && personas[data.persona as keyof typeof personas]
-        ? personas[data.persona as keyof typeof personas] + "\n"
+        ? personas[data.persona as keyof typeof personas] + "\n\n"
         : "";
-
-    const systemPrompt = personaPrompt +
-      `You are a witty financial analyst providing market commentary comparing the user's portfolio to the broader market.
-      Your task is to return a JSON object with exactly these fields:
-      {
-        "message": "your witty insight here",
-        "sentiment": "bullish/bearish/neutral",
-        "disclaimer": "standard disclaimer"
-      }
-
-      Guidelines:
-      - Keep the message short and punchy (280 chars max)
-      - Use natural, conversational tone
-      - Include timeframes for price changes
-      - Comment on portfolio diversity
-      - Be honest about losses
-      - Point out any standout performers
-
-      DO NOT use single quotes in the JSON response, use double quotes.
-      DO NOT include any additional fields or formatting.`;
 
     const response = await ai.chat.completions.create({
       model: "gpt-4",
       messages: [
         {
           role: "system",
-          content: systemPrompt
+          content: personaPrompt + `Your task is to analyze the portfolio and market data to provide a witty insight. 
+          Keep it short, engaging, and make it sound like a human expert - no AI language.
+          Keep the message under 280 characters.
+          Mention timeframes for price changes (e.g., 'in the last 24hr').
+          Comment on portfolio diversity and point out any standout performers.
+          Be honest about losses - don't hype up negative performance.
+
+          Structure your response EXACTLY as valid JSON like this example:
+          {
+            "message": "Your portfolio's spicier than a Wall Street lunch meeting! BTC up 2% in 24hr while ETH's taking a power nap. Diversification game strong!",
+            "sentiment": "bullish",
+            "disclaimer": "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
+          }`
         },
         {
           role: "user",
-          content: `Compare the user's portfolio to the market and give a witty, engaging insight. Portfolio: ${JSON.stringify(data.portfolioItems)}. Market overview: ${JSON.stringify(data.marketAssets)}`
+          content: `Portfolio data: ${JSON.stringify(data.portfolioItems)}
+          Market overview: ${JSON.stringify(data.marketAssets)}`
         }
       ],
       temperature: 0.7,
-      max_tokens: 300,
-      response_format: { type: "json_object" }
+      max_tokens: 500
     });
 
     const content = response.choices[0].message.content;
@@ -84,26 +76,18 @@ export async function generatePortfolioInsight(data: MarketData) {
     }
 
     try {
-      const parsedResponse = JSON.parse(content);
+      const parsedResponse = JSON.parse(content.trim());
       return {
-        message: parsedResponse.message.trim(),
+        message: parsedResponse.message,
         sentiment: parsedResponse.sentiment,
-        disclaimer: parsedResponse.disclaimer
+        disclaimer: parsedResponse.disclaimer || "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
       };
     } catch (parseError) {
       console.error("Failed to parse OpenAI response:", content);
-      return {
-        message: "Market's looking spicy today, but my crystal ball needs a recharge. Check back in a bit!",
-        sentiment: "neutral",
-        disclaimer: "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
-      };
+      throw new Error("Invalid response format from OpenAI");
     }
   } catch (error) {
     console.error("OpenAI API error:", error);
-    return {
-      message: "Market's looking spicy today, but my crystal ball needs a recharge. Check back in a bit!",
-      sentiment: "neutral",
-      disclaimer: "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
-    };
+    throw error;
   }
 }
