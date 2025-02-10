@@ -77,20 +77,27 @@ export function registerRoutes(app: Express) {
       const { generatePortfolioInsight } = await import('./lib/openai');
 
       // Add debug logging
-      console.log('Portfolio Items:', JSON.stringify(portfolioItems, null, 2));
-      console.log('Market Assets:', JSON.stringify(marketAssets, null, 2));
+      console.log('Raw Portfolio Items:', JSON.stringify(portfolioItems, null, 2));
+      console.log('Raw Market Assets:', JSON.stringify(marketAssets, null, 2));
 
       try {
         const dataForAI = {
           portfolioItems: portfolioItems.map(item => ({
-            ...item,
+            id: item.id,
             assetName: item.asset?.name || item.asset?.symbol || 'Unknown Asset',
             symbol: item.asset?.symbol || 'Unknown',
-            type: item.assetType
+            type: item.assetType,
+            currentPrice: item.asset?.currentPrice || item.asset?.price || 0,
+            percentChange: {
+              '1h': item.asset?.percent_change_1h || null,
+              '24h': item.asset?.percent_change_24h || item.asset?.priceChangePercentage24h || null,
+              '7d': item.asset?.percent_change_7d || null
+            }
           })),
           marketAssets: marketAssets.map(asset => ({
             symbol: asset.symbol,
             name: asset.name,
+            type: asset.type,
             current_price: asset.current_price,
             changes: asset.type === 'crypto' ? {
               '1h': asset.percent_change_1h || null,
@@ -99,14 +106,28 @@ export function registerRoutes(app: Express) {
             } : {
               '24h': asset.percent_change_24h || null
             },
-            type: asset.type,
             fullName: asset.description || asset.name || asset.symbol
           })),
+          marketSummary: {
+            totalAssets: portfolioItems.length,
+            assetTypes: {
+              crypto: portfolioItems.filter(item => item.assetType === 'crypto').length,
+              stocks: portfolioItems.filter(item => item.assetType === 'stock').length
+            },
+            topMovers: marketAssets
+              .filter(asset => asset.percent_change_24h != null)
+              .sort((a, b) => Math.abs(b.percent_change_24h || 0) - Math.abs(a.percent_change_24h || 0))
+              .slice(0, 3)
+              .map(asset => ({
+                symbol: asset.symbol,
+                change24h: asset.percent_change_24h
+              }))
+          },
           persona
         };
 
         // Add debug logging for final data
-        console.log('Data sent to OpenAI:', JSON.stringify(dataForAI, null, 2));
+        console.log('Structured Data for OpenAI:', JSON.stringify(dataForAI, null, 2));
 
         const insights = await generatePortfolioInsight(dataForAI);
         res.json(insights);
