@@ -74,7 +74,8 @@ export async function generatePortfolioInsight(data: MarketData) {
         }
       ],
       temperature: 0.7,
-      max_tokens: 300
+      max_tokens: 300,
+      response_format: { type: "json_object" }
     });
 
     const content = response.choices[0].message.content;
@@ -82,21 +83,18 @@ export async function generatePortfolioInsight(data: MarketData) {
       throw new Error("Empty response from OpenAI");
     }
 
-    // Clean up any potential single quotes and ensure proper JSON formatting
-    const cleanContent = content
-      .replace(/[\u2018\u2019]/g, "'")
-      .replace(/[\u201C\u201D]/g, '"')
-      .replace(/'/g, '"')
-      .trim();
-
     try {
-      return JSON.parse(cleanContent);
-    } catch (parseError) {
-      console.error("Failed to parse OpenAI response:", cleanContent);
+      const parsedResponse = JSON.parse(content);
       return {
-        message: cleanContent.split('.')[0],
-        sentiment: cleanContent.toLowerCase().includes('up') || cleanContent.toLowerCase().includes('gain') ? 'bullish' : 
-                  cleanContent.toLowerCase().includes('down') || cleanContent.toLowerCase().includes('loss') ? 'bearish' : 'neutral',
+        message: parsedResponse.message.trim(),
+        sentiment: parsedResponse.sentiment,
+        disclaimer: parsedResponse.disclaimer
+      };
+    } catch (parseError) {
+      console.error("Failed to parse OpenAI response:", content);
+      return {
+        message: "Market's looking spicy today, but my crystal ball needs a recharge. Check back in a bit!",
+        sentiment: "neutral",
         disclaimer: "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
       };
     }
