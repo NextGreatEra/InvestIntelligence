@@ -31,7 +31,9 @@ export function registerRoutes(app: Express) {
               name: coin.name || coin.symbol,
               description: coin.name || coin.symbol,
               current_price: parseFloat(coin.price),
+              percent_change_1h: coin.percentChange1h ? parseFloat(coin.percentChange1h) : null,
               percent_change_24h: coin.percentChange24h ? parseFloat(coin.percentChange24h) : null,
+              percent_change_7d: coin.percentChange7d ? parseFloat(coin.percentChange7d) : null,
               type: 'crypto'
             }));
 
@@ -74,12 +76,17 @@ export function registerRoutes(app: Express) {
 
       const { generatePortfolioInsight } = await import('./lib/openai');
 
+      // Add debug logging
+      console.log('Portfolio Items:', JSON.stringify(portfolioItems, null, 2));
+      console.log('Market Assets:', JSON.stringify(marketAssets, null, 2));
+
       try {
-        const insights = await generatePortfolioInsight({
+        const dataForAI = {
           portfolioItems: portfolioItems.map(item => ({
             ...item,
             assetName: item.asset?.name || item.asset?.symbol || 'Unknown Asset',
-            symbol: item.asset?.symbol || 'Unknown'
+            symbol: item.asset?.symbol || 'Unknown',
+            type: item.assetType
           })),
           marketAssets: marketAssets.map(asset => ({
             symbol: asset.symbol,
@@ -96,7 +103,12 @@ export function registerRoutes(app: Express) {
             fullName: asset.description || asset.name || asset.symbol
           })),
           persona
-        });
+        };
+
+        // Add debug logging for final data
+        console.log('Data sent to OpenAI:', JSON.stringify(dataForAI, null, 2));
+
+        const insights = await generatePortfolioInsight(dataForAI);
         res.json(insights);
       } catch (error) {
         console.error('Error generating portfolio insight:', error);
