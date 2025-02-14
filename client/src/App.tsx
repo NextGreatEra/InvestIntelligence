@@ -6,6 +6,8 @@ import Sidebar from "@/components/layout/sidebar";
 import Dashboard from "@/pages/dashboard";
 import Portfolio from "@/pages/portfolio";
 import NotFound from "@/pages/not-found";
+import AuthPage from "@/pages/auth";
+import { AuthProvider } from "@/hooks/use-auth";
 
 function Router() {
   return (
@@ -13,6 +15,7 @@ function Router() {
       <Sidebar />
       <main className="flex-1 overflow-y-auto p-6">
         <Switch>
+          <Route path="/auth" component={AuthPage} />
           <Route path="/" component={Dashboard} />
           <Route path="/portfolio" component={Portfolio} />
           <Route component={NotFound} />
@@ -25,8 +28,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
+      <AuthProvider>
+        <Router />
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

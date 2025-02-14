@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Briefcase, LineChart, Settings, LogIn } from "lucide-react";
+import { LayoutDashboard, Briefcase, LineChart, Settings, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -13,6 +13,7 @@ const navigation = [
 
 export default function Sidebar() {
   const [location] = useLocation();
+  const { user, logoutMutation } = useAuth();
 
   return (
     <div className="flex h-full w-64 flex-col bg-sidebar border-r border-border">
@@ -22,14 +23,30 @@ export default function Sidebar() {
       <nav className="flex-1 space-y-1 px-2 py-4">
         {/* User auth status */}
         <div className="px-3 py-2">
-          <Button 
-            variant="outline" 
-            className="w-full justify-start gap-2"
-            onClick={() => window.location.href = '/api/login'}
-          >
-            <LogIn className="h-4 w-4" />
-            Log in / Create Account
-          </Button>
+          {user ? (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Welcome, {user.username}
+              </p>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-2"
+                onClick={() => logoutMutation.mutate()}
+              >
+                <LogOut className="h-4 w-4" />
+                Log out
+              </Button>
+            </div>
+          ) : (
+            <Button 
+              variant="outline" 
+              className="w-full justify-start gap-2"
+              onClick={() => window.location.href = '/auth'}
+            >
+              <LogIn className="h-4 w-4" />
+              Log in / Create Account
+            </Button>
+          )}
         </div>
         {navigation.map((item) => {
           const isActive = location === item.href;
