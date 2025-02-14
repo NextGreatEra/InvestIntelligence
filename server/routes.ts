@@ -272,12 +272,6 @@ export function registerRoutes(app: Express) {
         message: error instanceof Error ? error.message : 'Failed to add asset to portfolio'
       });
     }
-    } catch (error) {
-      console.error('Error adding portfolio item:', error);
-      res.status(400).json({
-        message: error instanceof Error ? error.message : 'Failed to add asset to portfolio'
-      });
-    }
   });
 
   app.delete('/api/portfolio/:id', requireAuth, async (req, res) => {
