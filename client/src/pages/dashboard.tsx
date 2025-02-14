@@ -59,12 +59,12 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <AssetList />
+        <AiInsights />
         <Markets />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <AiInsights />
+        <AssetList />
         {history.length > 0 && (
           <PriceChart data={history} symbol="BTC" />
         )}
