@@ -266,17 +266,12 @@ export function registerRoutes(app: Express) {
             )
           }
         });
-      }
-
-      // If user is authenticated, save to database
-      const portfolioItem = await storage.createPortfolioItem({
-        userId: req.user.id,
-        assetId: asset.id,
-        rank: 0,
-        assetType: type
+    } catch (error) {
+      console.error('Error adding portfolio item:', error);
+      res.status(400).json({
+        message: error instanceof Error ? error.message : 'Failed to add asset to portfolio'
       });
-
-      res.json(portfolioItem);
+    }
     } catch (error) {
       console.error('Error adding portfolio item:', error);
       res.status(400).json({
