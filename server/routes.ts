@@ -6,7 +6,10 @@ import { setupAuth } from "./auth";
 // Middleware to ensure user is authenticated
 function requireAuth(req: any, res: any, next: any) {
   if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ 
+      message: "Please create an account to save your portfolio changes",
+      code: "AUTH_REQUIRED"
+    });
   }
   next();
 }
@@ -22,14 +25,15 @@ export function registerRoutes(app: Express) {
     res.json({ status: 'ok' });
   });
 
-  // Protected routes
-  app.get('/api/portfolio/insight', requireAuth, async (req, res) => {
+  // Public routes
+  app.get('/api/portfolio/insight', async (req, res) => {
     try {
       const persona = req.query.persona as string;
+      const userId = req.user?.id; // Optional user ID
 
       // Fetch both portfolio items and market data
       const [portfolioItems, marketAssets] = await Promise.all([
-        storage.getPortfolioItemsWithAssets(req.user!.id),
+        userId ? storage.getPortfolioItemsWithAssets(userId) : [],
         (async () => {
           const assets = await storage.getAssets();
           const cryptoMarkets = assets
@@ -149,9 +153,10 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.get('/api/portfolio', requireAuth, async (req, res) => {
+  app.get('/api/portfolio', async (req, res) => {
     try {
-      const portfolioItems = await storage.getPortfolioItemsWithAssets(req.user!.id);
+      const userId = req.user?.id;
+      const portfolioItems = userId ? await storage.getPortfolioItemsWithAssets(userId) : [];
       const enrichedItems = await Promise.all(
         portfolioItems.map(async (item) => {
           if (item.assetType === 'stock') {
@@ -192,6 +197,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  // Protected routes - require authentication
   app.post('/api/portfolio', requireAuth, async (req, res) => {
     try {
       const { symbol, name, type } = req.body;
