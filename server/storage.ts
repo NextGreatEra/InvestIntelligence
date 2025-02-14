@@ -74,6 +74,17 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async createGuestUser(): Promise<User> {
+    const guestId = randomBytes(8).toString('hex');
+    const [user] = await db.insert(users).values({
+      username: `guest_${guestId}`,
+      password: randomBytes(32).toString('hex'),
+      isGuest: true,
+      createdAt: new Date()
+    }).returning();
+    return user;
+  }
+
   // Asset methods
   async getAssets(): Promise<Asset[]> {
     return await db.select().from(assets);

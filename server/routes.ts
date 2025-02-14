@@ -231,12 +231,26 @@ export function registerRoutes(app: Express) {
         throw new Error('Invalid asset type');
       }
 
-      // If user is not authenticated, just return the asset info
-      // The client will handle storing it in localStorage
+      // Create or get guest user if not authenticated
+      let userId;
       if (!req.user) {
-        return res.json({
-          id: Date.now(), // Temporary ID for localStorage
-          asset: {
+        const guestUser = await storage.createGuestUser();
+        userId = guestUser.id;
+      } else {
+        userId = req.user.id;
+      }
+
+      // Create portfolio item
+      const portfolioItem = await storage.createPortfolioItem({
+        userId,
+        assetId: asset.id,
+        rank: 0,
+        assetType: type
+      });
+
+      return res.json({
+        id: portfolioItem.id,
+        asset: {
             id: asset.id,
             symbol: asset.symbol,
             name: type === 'stock' ? asset.description : asset.name,
