@@ -26,6 +26,54 @@ export function registerRoutes(app: Express) {
   });
 
   // Public routes
+  app.get('/api/portfolio', async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      // If user is not authenticated, return empty array (client will use localStorage)
+      if (!userId) {
+        return res.json([]);
+      }
+      const portfolioItems = await storage.getPortfolioItemsWithAssets(userId);
+      const enrichedItems = await Promise.all(
+        portfolioItems.map(async (item) => {
+          if (item.assetType === 'stock') {
+            const stock = await storage.getStockById(item.assetId);
+            return {
+              ...item,
+              asset: {
+                id: stock.id,
+                symbol: stock.symbol,
+                name: stock.description,
+                currentPrice: stock.c,
+                priceChangePercentage24h: stock.dp,
+                type: 'stock'
+              }
+            };
+          } else {
+            const asset = await storage.getAssetById(item.assetId);
+            return {
+              ...item,
+              asset: {
+                id: asset.id,
+                symbol: asset.symbol,
+                name: asset.name,
+                currentPrice: asset.price,
+                percent_change_1h: asset.percentChange1h,
+                percent_change_24h: asset.percentChange24h,
+                percent_change_7d: asset.percentChange7d,
+                type: 'crypto'
+              }
+            };
+          }
+        })
+      );
+      res.json(enrichedItems);
+    } catch (error) {
+      console.error('Error fetching portfolio:', error);
+      res.status(500).json({ message: 'Failed to fetch portfolio items' });
+    }
+  });
+
   app.get('/api/portfolio/insight', async (req, res) => {
     try {
       const persona = req.query.persona as string;
@@ -153,51 +201,6 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.get('/api/portfolio', async (req, res) => {
-    try {
-      const userId = req.user?.id;
-      const portfolioItems = userId ? await storage.getPortfolioItemsWithAssets(userId) : [];
-      const enrichedItems = await Promise.all(
-        portfolioItems.map(async (item) => {
-          if (item.assetType === 'stock') {
-            const stock = await storage.getStockById(item.assetId);
-            return {
-              ...item,
-              asset: {
-                id: stock.id,
-                symbol: stock.symbol,
-                name: stock.description,
-                currentPrice: stock.c,
-                priceChangePercentage24h: stock.dp,
-                type: 'stock'
-              }
-            };
-          } else {
-            const asset = await storage.getAssetById(item.assetId);
-            return {
-              ...item,
-              asset: {
-                id: asset.id,
-                symbol: asset.symbol,
-                name: asset.name,
-                currentPrice: asset.price,
-                percent_change_1h: asset.percentChange1h,
-                percent_change_24h: asset.percentChange24h,
-                percent_change_7d: asset.percentChange7d,
-                type: 'crypto'
-              }
-            };
-          }
-        })
-      );
-      res.json(enrichedItems);
-    } catch (error) {
-      console.error('Error fetching portfolio:', error);
-      res.status(500).json({ message: 'Failed to fetch portfolio items' });
-    }
-  });
-
-  // Protected routes - require authentication
   app.post('/api/portfolio', requireAuth, async (req, res) => {
     try {
       const { symbol, name, type } = req.body;

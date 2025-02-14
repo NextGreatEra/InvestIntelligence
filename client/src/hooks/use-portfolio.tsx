@@ -32,7 +32,13 @@ export function usePortfolio() {
         const newItem = {
           id: Date.now(), // Use timestamp as temporary ID
           ...asset,
-          createdAt: new Date().toISOString()
+          asset: {
+            id: Date.now(),
+            symbol: asset.symbol,
+            name: asset.name,
+            type: asset.type,
+            currentPrice: 0, // This will be updated by the market data
+          }
         };
         localItems.push(newItem);
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localItems));
@@ -66,9 +72,9 @@ export function usePortfolio() {
           localItems.map(async (item: any) => {
             try {
               await addToPortfolioMutation.mutateAsync({
-                symbol: item.symbol,
-                name: item.name,
-                type: item.type
+                symbol: item.asset.symbol,
+                name: item.asset.name,
+                type: item.asset.type
               });
             } catch (error) {
               console.error("Failed to migrate item:", error);
