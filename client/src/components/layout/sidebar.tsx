@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { LayoutDashboard, Briefcase, LineChart, Settings, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
