@@ -399,7 +399,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.post('/api/portfolio', requireAuth, async (req, res) => {
+  app.post('/api/portfolio', async (req, res) => {
     try {
       console.log('Received portfolio item request:', req.body);
       const { symbol, name, type } = req.body;
