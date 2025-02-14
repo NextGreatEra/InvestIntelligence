@@ -1,11 +1,7 @@
 import { Link, useLocation } from "wouter";
-import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  Briefcase,
-  LineChart,
-  Settings
-} from "lucide-react";
+import { LayoutDashboard, Briefcase, LineChart, Settings, LogIn } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -23,6 +19,17 @@ export default function Sidebar() {
         <h1 className="text-xl font-bold text-sidebar-foreground">Portfolio AI</h1>
       </div>
       <nav className="flex-1 space-y-1 px-2 py-4">
+        {/* User auth status */}
+        <div className="px-3 py-2">
+          <Button 
+            variant="outline" 
+            className="w-full justify-start gap-2"
+            onClick={() => window.location.href = '/api/login'}
+          >
+            <LogIn className="h-4 w-4" />
+            Log in / Create Account
+          </Button>
+        </div>
         {navigation.map((item) => {
           const isActive = location === item.href;
           return (
