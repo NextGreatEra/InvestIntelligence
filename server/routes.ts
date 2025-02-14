@@ -201,7 +201,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.post('/api/portfolio', requireAuth, async (req, res) => {
+  app.post('/api/portfolio', async (req, res) => {
     try {
       const { symbol, name, type } = req.body;
 
@@ -231,8 +231,32 @@ export function registerRoutes(app: Express) {
         throw new Error('Invalid asset type');
       }
 
+      // If user is not authenticated, just return the asset info
+      // The client will handle storing it in localStorage
+      if (!req.user) {
+        return res.json({
+          id: Date.now(), // Temporary ID for localStorage
+          asset: {
+            id: asset.id,
+            symbol: asset.symbol,
+            name: type === 'stock' ? asset.description : asset.name,
+            type: type,
+            currentPrice: type === 'stock' ? parseFloat(asset.c) : parseFloat(asset.price?.toString() || '0'),
+            ...(type === 'stock' 
+              ? { priceChangePercentage24h: asset.dp ? parseFloat(asset.dp) : null }
+              : {
+                  percent_change_1h: asset.percentChange1h ? parseFloat(asset.percentChange1h.toString()) : null,
+                  percent_change_24h: asset.percentChange24h ? parseFloat(asset.percentChange24h.toString()) : null,
+                  percent_change_7d: asset.percentChange7d ? parseFloat(asset.percentChange7d.toString()) : null,
+                }
+            )
+          }
+        });
+      }
+
+      // If user is authenticated, save to database
       const portfolioItem = await storage.createPortfolioItem({
-        userId: req.user!.id,
+        userId: req.user.id,
         assetId: asset.id,
         rank: 0,
         assetType: type
