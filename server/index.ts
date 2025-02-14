@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupAuth } from "./auth";
 
 const app = express();
 app.use(express.json());
@@ -36,6 +37,13 @@ app.use((req, res, next) => {
   next();
 });
 
+if (!process.env.SESSION_SECRET) {
+  throw new Error("Missing SESSION_SECRET environment variable");
+}
+
+// Set up authentication
+setupAuth(app);
+
 (async () => {
   const server = registerRoutes(app);
 
@@ -43,8 +51,12 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    // Log error stack in development
+    if (app.get("env") === "development") {
+      console.error(err.stack);
+    }
+
     res.status(status).json({ message });
-    throw err;
   });
 
   // importantly only setup vite in development and after

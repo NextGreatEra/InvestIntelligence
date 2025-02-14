@@ -1,23 +1,35 @@
 import { Express } from "express";
 import http from "http";
 import { storage } from "./storage";
-import { insertAssetSchema } from "@shared/schema";
+import { setupAuth } from "./auth";
+
+// Middleware to ensure user is authenticated
+function requireAuth(req: any, res: any, next: any) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  next();
+}
 
 export function registerRoutes(app: Express) {
   const server = http.createServer(app);
+
+  // Setup authentication routes
+  setupAuth(app);
 
   // API routes will go here
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
   });
 
-  app.get('/api/portfolio/insight', async (req, res) => {
+  // Protected routes
+  app.get('/api/portfolio/insight', requireAuth, async (req, res) => {
     try {
       const persona = req.query.persona as string;
 
       // Fetch both portfolio items and market data
       const [portfolioItems, marketAssets] = await Promise.all([
-        storage.getPortfolioItemsWithAssets(),
+        storage.getPortfolioItemsWithAssets(req.user!.id),
         (async () => {
           const assets = await storage.getAssets();
           const cryptoMarkets = assets
@@ -30,10 +42,10 @@ export function registerRoutes(app: Express) {
               symbol: coin.symbol,
               name: coin.name || coin.symbol,
               description: coin.name || coin.symbol,
-              current_price: parseFloat(coin.price),
-              percent_change_1h: coin.percentChange1h ? parseFloat(coin.percentChange1h) : null,
-              percent_change_24h: coin.percentChange24h ? parseFloat(coin.percentChange24h) : null,
-              percent_change_7d: coin.percentChange7d ? parseFloat(coin.percentChange7d) : null,
+              current_price: parseFloat(coin.price?.toString() || '0'),
+              percent_change_1h: coin.percentChange1h ? parseFloat(coin.percentChange1h.toString()) : null,
+              percent_change_24h: coin.percentChange24h ? parseFloat(coin.percentChange24h.toString()) : null,
+              percent_change_7d: coin.percentChange7d ? parseFloat(coin.percentChange7d.toString()) : null,
               type: 'crypto'
             }));
 
@@ -44,8 +56,8 @@ export function registerRoutes(app: Express) {
               return stock ? {
                 id: stock.id.toString(),
                 symbol: stock.symbol,
-                name: stock.description || stock.symbol,
-                description: stock.description || stock.symbol,
+                name: stock.description,
+                description: stock.description,
                 current_price: parseFloat(stock.c),
                 percent_change_24h: stock.dp ? parseFloat(stock.dp) : null,
                 type: 'stock'
@@ -53,7 +65,7 @@ export function registerRoutes(app: Express) {
             })
           );
 
-          const validStockData = stockData.filter(stock => stock !== null);
+          const validStockData = stockData.filter((stock): stock is NonNullable<typeof stock> => stock !== null);
           return [...cryptoMarkets, ...validStockData];
         })()
       ]);
@@ -63,7 +75,7 @@ export function registerRoutes(app: Express) {
         portfolioItems.map(async (item) => {
           if (item.assetType === 'stock') {
             const stock = await storage.getStockById(item.assetId);
-            if (!stock) return null;
+            if(!stock) return null; //Handle potential null
             return {
               id: item.id,
               assetName: stock.description || stock.symbol,
@@ -76,67 +88,45 @@ export function registerRoutes(app: Express) {
             };
           } else {
             const asset = await storage.getAssetById(item.assetId);
-            if (!asset) return null;
+            if(!asset) return null; //Handle potential null
             return {
               id: item.id,
               assetName: asset.name || asset.symbol,
               symbol: asset.symbol,
               type: item.assetType,
-              currentPrice: parseFloat(asset.price),
+              currentPrice: parseFloat(asset.price?.toString() || '0'),
               percentChange: {
-                '1h': asset.percentChange1h ? parseFloat(asset.percentChange1h) : null,
-                '24h': asset.percentChange24h ? parseFloat(asset.percentChange24h) : null,
-                '7d': asset.percentChange7d ? parseFloat(asset.percentChange7d) : null
+                '1h': asset.percentChange1h ? parseFloat(asset.percentChange1h.toString()) : null,
+                '24h': asset.percentChange24h ? parseFloat(asset.percentChange24h.toString()) : null,
+                '7d': asset.percentChange7d ? parseFloat(asset.percentChange7d.toString()) : null
               }
             };
           }
         })
       );
 
-      const validPortfolioItems = enrichedPortfolioItems.filter(item => item !== null);
-
       const { generatePortfolioInsight } = await import('./lib/openai');
 
-      // Add debug logging
-      console.log('Enriched Portfolio Items:', JSON.stringify(validPortfolioItems, null, 2));
-      console.log('Market Assets:', JSON.stringify(marketAssets, null, 2));
-
       const dataForAI = {
-        portfolioItems: validPortfolioItems,
-        marketAssets: marketAssets.map(asset => ({
-          symbol: asset.symbol,
-          name: asset.name,
-          type: asset.type,
-          current_price: asset.current_price,
-          changes: asset.type === 'crypto' ? {
-            '1h': asset.percent_change_1h,
-            '24h': asset.percent_change_24h,
-            '7d': asset.percent_change_7d
-          } : {
-            '24h': asset.percent_change_24h
-          },
-          fullName: asset.description || asset.name || asset.symbol
-        })),
+        portfolioItems: enrichedPortfolioItems.filter(item => item !== null), //Filter out nulls
+        marketAssets,
         marketSummary: {
-          totalAssets: validPortfolioItems.length,
+          totalAssets: enrichedPortfolioItems.filter(item => item !== null).length, //Filter out nulls
           assetTypes: {
-            crypto: validPortfolioItems.filter(item => item.type === 'crypto').length,
-            stocks: validPortfolioItems.filter(item => item.type === 'stock').length
+            crypto: enrichedPortfolioItems.filter(item => item?.type === 'crypto').length, //Handle potential null
+            stocks: enrichedPortfolioItems.filter(item => item?.type === 'stock').length //Handle potential null
           },
           topMovers: marketAssets
             .filter(asset => asset.percent_change_24h != null)
-            .sort((a, b) => Math.abs(b.percent_change_24h) - Math.abs(a.percent_change_24h))
+            .sort((a, b) => Math.abs(b.percent_change_24h || 0) - Math.abs(a.percent_change_24h || 0))
             .slice(0, 3)
             .map(asset => ({
               symbol: asset.symbol,
-              change24h: asset.percent_change_24h
+              change24h: asset.percent_change_24h || 0
             }))
         },
         persona
       };
-
-      // Add debug logging for final data
-      console.log('Data for OpenAI:', JSON.stringify(dataForAI, null, 2));
 
       try {
         const insights = await generatePortfolioInsight(dataForAI);
@@ -159,9 +149,9 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.get('/api/portfolio', async (req, res) => {
+  app.get('/api/portfolio', requireAuth, async (req, res) => {
     try {
-      const portfolioItems = await storage.getPortfolioItemsWithAssets();
+      const portfolioItems = await storage.getPortfolioItemsWithAssets(req.user!.id);
       const enrichedItems = await Promise.all(
         portfolioItems.map(async (item) => {
           if (item.assetType === 'stock') {
@@ -202,7 +192,53 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.delete('/api/portfolio/:id', async (req, res) => {
+  app.post('/api/portfolio', requireAuth, async (req, res) => {
+    try {
+      const { symbol, name, type } = req.body;
+
+      if (!symbol || !name || !type) {
+        throw new Error('Missing required fields');
+      }
+
+      let asset;
+      if (type === 'stock') {
+        asset = await storage.getStockBySymbol(symbol);
+        if (!asset) {
+          throw new Error('Stock not found in database');
+        }
+
+        // If price is 0 or missing, fetch fresh price
+        if (parseFloat(asset.c) === 0 || !asset.c) {
+          const { getStockPrice } = await import('./lib/finnhub');
+          const { price, priceChange } = await getStockPrice(symbol);
+          asset = await storage.updateStock(symbol, price, priceChange);
+        }
+      } else if (type === 'crypto') {
+        asset = await storage.getAssetBySymbol(symbol);
+        if (!asset) {
+          throw new Error('Crypto asset not found in database');
+        }
+      } else {
+        throw new Error('Invalid asset type');
+      }
+
+      const portfolioItem = await storage.createPortfolioItem({
+        userId: req.user!.id,
+        assetId: asset.id,
+        rank: 0,
+        assetType: type
+      });
+
+      res.json(portfolioItem);
+    } catch (error) {
+      console.error('Error adding portfolio item:', error);
+      res.status(400).json({
+        message: error instanceof Error ? error.message : 'Failed to add asset to portfolio'
+      });
+    }
+  });
+
+  app.delete('/api/portfolio/:id', requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -213,6 +249,27 @@ export function registerRoutes(app: Express) {
     } catch (error) {
       console.error('Error removing portfolio item:', error);
       res.status(500).json({ message: 'Failed to remove portfolio item' });
+    }
+  });
+
+  app.patch('/api/portfolio/:id/rank', requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { rank } = req.body;
+
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Invalid portfolio item ID' });
+      }
+
+      if (typeof rank !== 'number') {
+        return res.status(400).json({ message: 'Invalid rank value' });
+      }
+
+      await storage.updatePortfolioRank(id, rank);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating portfolio item rank:', error);
+      res.status(500).json({ message: 'Failed to update portfolio item rank' });
     }
   });
 
@@ -309,7 +366,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.post('/api/portfolio', async (req, res) => {
+  app.post('/api/portfolio', requireAuth, async (req, res) => {
     try {
       console.log('Received portfolio item request:', req.body);
       const { symbol, name, type } = req.body;
@@ -341,6 +398,7 @@ export function registerRoutes(app: Express) {
       }
 
       const portfolioItem = await storage.createPortfolioItem({
+        userId: req.user!.id,
         assetId: asset.id,
         rank: 0,
         assetType: type
@@ -423,7 +481,7 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.patch('/api/portfolio/:id/rank', async (req, res) => {
+  app.patch('/api/portfolio/:id/rank', requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const { rank } = req.body;
@@ -444,12 +502,11 @@ export function registerRoutes(app: Express) {
     }
   });
 
-
   // Add the new refresh endpoint
-  app.post('/api/refresh', async (req, res) => {
+  app.post('/api/refresh', requireAuth, async (req, res) => {
     try {
       // Get all portfolio items
-      const portfolioItems = await storage.getPortfolioItemsWithAssets();
+      const portfolioItems = await storage.getPortfolioItemsWithAssets(req.user!.id);
 
       // Get market assets
       const assets = await storage.getAssets();

@@ -1,8 +1,17 @@
-import { Asset, InsertAsset, Stock, InsertStock, assets, stocks, portfolioItems, PortfolioItem, InsertPortfolioItem } from "@shared/schema";
-import { db } from "./db";
+import { Asset, InsertAsset, Stock, InsertStock, assets, stocks, portfolioItems, PortfolioItem, InsertPortfolioItem, users, User, InsertUser } from "@shared/schema";
+import { db, pool } from "./db";
 import { eq, or, ilike, sql } from "drizzle-orm";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
+  // User methods
+  getUser(id: number): Promise<User>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+
   // Asset methods
   getAssets(): Promise<Asset[]>;
   getAsset(id: number): Promise<Asset | undefined>;
@@ -22,15 +31,50 @@ export interface IStorage {
   removeStock(id: number): Promise<void>;
 
   // Portfolio methods
-  getPortfolioItemsWithAssets(): Promise<any[]>;
+  getPortfolioItemsWithAssets(userId: number): Promise<any[]>;
   createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem>;
   removePortfolioItem(id: number): Promise<void>;
   updatePortfolioRank(id: number, rank: number): Promise<void>;
   getStockById(id: number): Promise<Stock>;
   getAssetById(id: number): Promise<Asset>;
+
+  // Session store
+  sessionStore: session.Store;
 }
 
 export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true
+    });
+  }
+
+  // User methods
+  async getUser(id: number): Promise<User> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    if (!user) throw new Error(`User with id ${id} not found`);
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users)
+      .values({
+        ...insertUser,
+        createdAt: new Date()
+      })
+      .returning();
+    return user;
+  }
+
+  // Asset methods
   async getAssets(): Promise<Asset[]> {
     return await db.select().from(assets);
   }
@@ -74,9 +118,9 @@ export class DatabaseStorage implements IStorage {
     }
 
     const [asset] = await db.insert(assets)
-      .values({ 
+      .values({
         ...insertAsset,
-        lastUpdated: new Date() 
+        lastUpdated: new Date()
       })
       .returning();
     return asset;
@@ -154,9 +198,9 @@ export class DatabaseStorage implements IStorage {
     }
 
     const [stock] = await db.insert(stocks)
-      .values({ 
+      .values({
         ...insertStock,
-        lastUpdated: new Date() 
+        lastUpdated: new Date()
       })
       .returning();
     return stock;
@@ -179,23 +223,26 @@ export class DatabaseStorage implements IStorage {
     await db.delete(stocks).where(eq(stocks.id, id));
   }
 
-  async getPortfolioItemsWithAssets(): Promise<any[]> {
-    return await db.select().from(portfolioItems);
+  async getPortfolioItemsWithAssets(userId: number): Promise<any[]> {
+    return await db.select()
+      .from(portfolioItems)
+      .where(eq(portfolioItems.userId, userId))
+      .orderBy(portfolioItems.rank);
   }
 
   async createPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem> {
-    // Get current number of portfolio items
+    // Get current number of portfolio items for this user
     const existingItems = await db.select()
       .from(portfolioItems)
+      .where(eq(portfolioItems.userId, item.userId))
       .orderBy(portfolioItems.rank);
 
     // New item gets last rank, using 1-based ranking
     const [portfolioItem] = await db.insert(portfolioItems)
-      .values({ 
-        assetId: item.assetId,
-        assetType: item.assetType,
+      .values({
+        ...item,
         rank: existingItems.length + 1,
-        lastUpdated: new Date() 
+        lastUpdated: new Date()
       })
       .returning();
     return portfolioItem;
@@ -207,30 +254,35 @@ export class DatabaseStorage implements IStorage {
 
   async updatePortfolioRank(id: number, newRank: number): Promise<void> {
     await db.transaction(async (tx) => {
+      const [item] = await tx
+        .select()
+        .from(portfolioItems)
+        .where(eq(portfolioItems.id, id));
+
+      if (!item) throw new Error('Portfolio item not found');
+
       const items = await tx
         .select()
         .from(portfolioItems)
+        .where(eq(portfolioItems.userId, item.userId))
         .orderBy(portfolioItems.rank);
 
       const totalItems = items.length;
       if (newRank < 1 || newRank > totalItems) {
-        throw new Error('invalid rank: out of range');
+        throw new Error('Invalid rank: out of range');
       }
 
-      const currentItem = items.find(item => item.id === id);
-      if (!currentItem) throw new Error('item not found');
-
-      const currentRank = currentItem.rank;
+      const currentRank = item.rank;
       if (newRank === currentRank) return;
 
       if (Math.abs(newRank - currentRank) !== 1) {
-        throw new Error('only adjacent swaps allowed');
+        throw new Error('Only adjacent swaps allowed');
       }
 
-      const targetItem = items.find(item => item.rank === newRank);
-      if (!targetItem) throw new Error('target item not found');
+      const targetItem = items.find(i => i.rank === newRank);
+      if (!targetItem) throw new Error('Target item not found');
 
-      // swap ranks atomically with a single update using a case expression
+      // Swap ranks atomically with a single update using a case expression
       await tx
         .update(portfolioItems)
         .set({
