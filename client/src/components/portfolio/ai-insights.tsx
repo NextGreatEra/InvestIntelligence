@@ -39,7 +39,7 @@ export default function AiInsights() {
   });
 
   return (
-    <Card>
+    <Card className="h-fit">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle>AI Insights</CardTitle>
         <Select
@@ -68,7 +68,7 @@ export default function AiInsights() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="space-y-2">
+            <div>
               {typeof insight?.message === 'string' ? (
                 <p className="text-lg font-medium">{insight.message}</p>
               ) : (
@@ -76,7 +76,7 @@ export default function AiInsights() {
               )}
             </div>
             {insight?.disclaimer && (
-              <p className="text-xs text-muted-foreground mt-4 border-t pt-2">
+              <p className="text-xs text-muted-foreground border-t pt-2">
                 {insight.disclaimer}
               </p>
             )}
