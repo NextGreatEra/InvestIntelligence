@@ -42,6 +42,10 @@ export default function AddAssetButton() {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to add asset");
       }
+      
+      // Invalidate portfolio queries to trigger refresh
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
+      return response.json();
 
       return response.json();
     },

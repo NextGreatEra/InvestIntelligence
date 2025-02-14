@@ -13,6 +13,8 @@ export function usePortfolio() {
   // Get portfolio from server if authenticated, otherwise from localStorage
   const { data: portfolio = [] } = useQuery({
     queryKey: ["/api/portfolio"],
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
     queryFn: async () => {
       if (!user) {
         const localItems = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]");
