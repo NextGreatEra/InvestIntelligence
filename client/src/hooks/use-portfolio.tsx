@@ -2,14 +2,22 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+
+const LOCAL_STORAGE_KEY = "portfolio_items";
 
 export function usePortfolio() {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // Get portfolio from server if authenticated, otherwise from localStorage
   const { data: portfolio = [] } = useQuery({
     queryKey: ["/api/portfolio"],
     queryFn: async () => {
+      if (!user) {
+        const localItems = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]");
+        return localItems;
+      }
       const res = await fetch("/api/portfolio");
       if (!res.ok) throw new Error("Failed to fetch portfolio");
       return res.json();
@@ -18,34 +26,64 @@ export function usePortfolio() {
 
   const addToPortfolioMutation = useMutation({
     mutationFn: async (asset: { symbol: string; name: string; type: string }) => {
+      if (!user) {
+        // Store in localStorage if not authenticated
+        const localItems = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]");
+        const newItem = {
+          id: Date.now(), // Use timestamp as temporary ID
+          ...asset,
+          createdAt: new Date().toISOString()
+        };
+        localItems.push(newItem);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localItems));
+        return newItem;
+      }
+
+      // Otherwise, store in server
       const res = await apiRequest("POST", "/api/portfolio", asset);
       const data = await res.json();
-      if (!res.ok) {
-        // Check if this is an authentication error
-        if (data.code === "AUTH_REQUIRED") {
-          toast({
-            title: "Account Required",
-            description: "Create an account to save your portfolio changes and track your assets across devices!",
-            variant: "default"
-          });
-        }
-        throw new Error(data.message);
-      }
+      if (!res.ok) throw new Error(data.message);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] });
     },
     onError: (error: Error) => {
-      if (!error.message.includes("Please create an account")) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive"
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // When user logs in, merge localStorage portfolio with server portfolio
+  useEffect(() => {
+    if (user) {
+      const localItems = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]");
+      if (localItems.length > 0) {
+        Promise.all(
+          localItems.map(async (item: any) => {
+            try {
+              await addToPortfolioMutation.mutateAsync({
+                symbol: item.symbol,
+                name: item.name,
+                type: item.type
+              });
+            } catch (error) {
+              console.error("Failed to migrate item:", error);
+            }
+          })
+        ).then(() => {
+          localStorage.removeItem(LOCAL_STORAGE_KEY);
+          toast({
+            title: "Portfolio Synced",
+            description: "Your portfolio has been saved to your account",
+          });
         });
       }
     }
-  });
+  }, [user]);
 
   return {
     portfolio,
