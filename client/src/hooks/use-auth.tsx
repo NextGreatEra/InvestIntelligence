@@ -64,6 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "destructive",
       });
     },
+    onSuccess: () => {
+      window.location.reload();
+    }
   });
 
   const registerMutation = useMutation({
@@ -86,6 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "destructive",
       });
     },
+    onSuccess: () => {
+      window.location.reload();
+    }
   });
 
   const logoutMutation = useMutation({
@@ -100,6 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "destructive",
       });
     },
+    onSuccess: () => {
+      window.location.reload();
+    }
   });
 
   return (
