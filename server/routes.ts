@@ -29,7 +29,7 @@ export function registerRoutes(app: Express) {
   app.get('/api/portfolio', async (req, res) => {
     try {
       let userId = req.user?.id;
-      
+
       // If no user, create a guest user
       if (!userId && !req.session.guestId) {
         const guestUser = await storage.createGuestUser();
@@ -618,6 +618,24 @@ export function registerRoutes(app: Express) {
       console.error('Error refreshing data:', error);
       res.status(500).json({ message: 'Failed to refresh data' });
     }
+  });
+
+  app.get("/api/user", async (req, res) => {
+    if (!req.user && !req.session.guestId) {
+      // Create a guest user if none exists
+      const guestUser = await storage.createGuestUser();
+      req.session.guestId = guestUser.id;
+      const { password, ...userWithoutPassword } = guestUser;
+      return res.json({ ...userWithoutPassword, isGuest: true });
+    } else if (!req.user && req.session.guestId) {
+      // Return existing guest user
+      const guestUser = await storage.getUser(req.session.guestId);
+      const { password, ...userWithoutPassword } = guestUser;
+      return res.json({ ...userWithoutPassword, isGuest: true });
+    }
+    // Return authenticated user without password
+    const { password, ...userWithoutPassword } = req.user;
+    res.json({ ...userWithoutPassword, isGuest: false });
   });
 
   return server;
