@@ -3,6 +3,7 @@ import { db, pool } from "./db";
 import { eq, or, ilike, sql } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import { randomBytes } from "crypto";
 
 const PostgresSessionStore = connectPg(session);
 

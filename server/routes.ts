@@ -28,10 +28,15 @@ export function registerRoutes(app: Express) {
   // Public routes
   app.get('/api/portfolio', async (req, res) => {
     try {
-      const userId = req.user?.id;
-      // If user is not authenticated, return empty array (client will use localStorage)
-      if (!userId) {
-        return res.json([]);
+      let userId = req.user?.id;
+      
+      // If no user, create a guest user
+      if (!userId && !req.session.guestId) {
+        const guestUser = await storage.createGuestUser();
+        req.session.guestId = guestUser.id;
+        userId = guestUser.id;
+      } else if (!userId && req.session.guestId) {
+        userId = req.session.guestId;
       }
       const portfolioItems = await storage.getPortfolioItemsWithAssets(userId);
       const enrichedItems = await Promise.all(
