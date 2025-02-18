@@ -1,4 +1,4 @@
-import AiInsights from "@/components/portfolio/ai-insights";
+import AiCommentary from "@/components/portfolio/ai-insights";
 import AssetList from "@/components/portfolio/asset-list";
 import Markets from "@/components/portfolio/markets";
 import PriceChart from "@/components/portfolio/price-chart";
@@ -59,7 +59,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <AiInsights />
+        <AiCommentary />
         <Markets />
       </div>
 
