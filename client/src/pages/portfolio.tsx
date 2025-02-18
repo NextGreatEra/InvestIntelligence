@@ -93,10 +93,10 @@ export default function Portfolio() {
   }, [user, toast, addAssetMutation]);
 
   useEffect(() => {
-    // Fetch user data on mount
+    // Only check user status without creating guest
     const fetchUser = async () => {
       try {
-        const response = await fetch('/api/user?createGuest=false');
+        const response = await fetch('/api/user');
         if (response.ok) {
           const data = await response.json();
           setUser(data);

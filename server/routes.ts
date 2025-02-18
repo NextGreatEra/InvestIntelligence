@@ -623,7 +623,7 @@ export function registerRoutes(app: Express) {
       if (!createGuest) {
         return res.json(null);
       }
-      // Create a guest user if requested
+      // Create a guest user only if explicitly requested
       const guestUser = await storage.createGuestUser();
       req.session.guestId = guestUser.id;
       const { password, ...userWithoutPassword } = guestUser;
