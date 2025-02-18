@@ -12,7 +12,7 @@ interface InsightResponse {
 }
 
 const personas = {
-  "default": "Default Analyst",
+  "default": "Default Persona",
   "gen-z": "Gen-Z Finance Bro",
   "boomer": "Traditional Investor",
   "sarcastic-veteran": "Jaded Wall Street Vet",
