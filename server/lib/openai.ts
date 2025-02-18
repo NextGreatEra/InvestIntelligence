@@ -108,8 +108,7 @@ export async function generatePortfolioInsight(data: MarketData) {
       : `Your task is to analyze the portfolio and market data to provide a witty insight. 
       Keep it short (<280 characters), engaging. make it sound like a human expert - no AI language.
       The portfolio items are sorted by their rank (higher rank = higher allocation).
-      If the portfolio is empty, tell the user to add assets to their portfolio or else they will miss out on the action.`) 
-      `;
+      If the portfolio is empty, tell the user to add assets to their portfolio or else they will miss out on the action.
       
       Focus on things the user might not know if they have not been paying attention to the market.
       If there's been a price change of greater than 5% it's probably worth mentioning, if the price change is 10% or greater definitely mention it, if the price change is over 15% yell about it.  
