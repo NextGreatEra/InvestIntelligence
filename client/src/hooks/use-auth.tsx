@@ -1,7 +1,9 @@
+
 import { createContext, ReactNode, useContext } from "react";
 import {
   useQuery,
   useMutation,
+  useQueryClient,
 } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
@@ -9,6 +11,7 @@ type User = {
   id: number;
   username: string;
   createdAt: Date;
+  isGuest?: boolean;
 };
 
 type AuthContextType = {
@@ -29,27 +32,22 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const {
     data: user,
     error,
     isLoading,
   } = useQuery<User | null>({
-    queryKey: ["/api/user"],
+    queryKey: ["user"],
     queryFn: async () => {
       const res = await fetch("/api/user");
-      if (res.status === 401) return null; //Explicitly handle 401 Unauthorized
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to fetch user");
+        if (res.status === 401) return null;
+        throw new Error("Failed to fetch user");
       }
       return res.json();
     },
-    onError: (err) => {
-      // Handle errors during user data fetching.  Could be improved with more specific error handling
-      console.error("Error fetching user data:", err);
-      toast({ title: "Error", description: "Could not fetch user data", variant: "destructive" });
-    }
   });
 
   const loginMutation = useMutation({
@@ -58,13 +56,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
-        credentials: 'include' //Important for session management
+        credentials: "include",
       });
-
+      
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || "Invalid username or password");
+        throw new Error(error.message || "Login failed");
       }
+      
       return res.json();
     },
     onError: (error: Error) => {
@@ -73,12 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: error.message,
         variant: "destructive",
       });
-      // Clear user data on login failure
-      //This is crucial to avoid stale data issues
     },
     onSuccess: () => {
-      window.location.reload();
-    }
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+    },
   });
 
   const registerMutation = useMutation({
@@ -87,11 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
+        credentials: "include",
       });
+      
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.message || "Registration failed");
       }
+      
       return res.json();
     },
     onError: (error: Error) => {
@@ -102,14 +102,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onSuccess: () => {
-      window.location.reload();
-    }
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+    },
   });
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/logout", { method: "POST" });
+      const res = await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include",
+      });
       if (!res.ok) throw new Error("Logout failed");
+      return res.json();
     },
     onError: (error: Error) => {
       toast({
@@ -119,14 +123,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onSuccess: () => {
-      window.location.reload();
-    }
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+    },
   });
 
   return (
     <AuthContext.Provider
       value={{
-        user: user ?? null,
+        user,
         isLoading,
         error,
         loginMutation,
