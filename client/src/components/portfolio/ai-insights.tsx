@@ -28,7 +28,10 @@ const personas = {
 type PersonaKey = keyof typeof personas;
 
 export default function AiCommentary() {
-  const [selectedPersona, setSelectedPersona] = useState<PersonaKey>("default");
+  const [selectedPersona, setSelectedPersona] = useState<PersonaKey>(() => {
+    const saved = localStorage.getItem('aiCommentaryPersona');
+    return (saved as PersonaKey) || "default";
+  });
 
   const { data: insight, isLoading, refetch } = useQuery<InsightResponse>({
     queryKey: ["/api/portfolio/insight", selectedPersona],
@@ -47,6 +50,7 @@ export default function AiCommentary() {
           value={selectedPersona}
           onValueChange={(value: PersonaKey) => {
             setSelectedPersona(value);
+            localStorage.setItem('aiCommentaryPersona', value);
             refetch();
           }}
         >
