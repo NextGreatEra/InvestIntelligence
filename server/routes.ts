@@ -280,12 +280,26 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.delete('/api/portfolio/:id', requireAuth, async (req, res) => {
+  app.delete('/api/portfolio/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: 'Invalid portfolio item ID' });
       }
+
+      const userId = req.user?.id || req.session.guestId;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      // Verify the portfolio item belongs to the user
+      const portfolioItems = await storage.getPortfolioItemsWithAssets(userId);
+      const itemExists = portfolioItems.some(item => item.id === id);
+
+      if (!itemExists) {
+        return res.status(403).json({ message: 'You do not have permission to delete this item' });
+      }
+
       await storage.removePortfolioItem(id);
       res.json({ success: true });
     } catch (error) {
