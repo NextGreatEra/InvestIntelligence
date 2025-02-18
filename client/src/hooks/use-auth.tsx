@@ -123,8 +123,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user"] });
-      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+      // Reset all queries to handle logout cleanly
+      queryClient.resetQueries();
+      // Force a hard refresh to clear all state
+      window.location.href = '/';
     },
   });
 
