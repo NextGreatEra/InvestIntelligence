@@ -12,6 +12,7 @@ export interface IStorage {
   getUser(id: number): Promise<User>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  deleteUser(userId: number): Promise<void>;
 
   // Asset methods
   getAssets(): Promise<Asset[]>;
@@ -84,6 +85,16 @@ export class DatabaseStorage implements IStorage {
       createdAt: new Date()
     }).returning();
     return user;
+  }
+
+  async deleteUser(userId: number) {
+    // Delete all portfolio items first
+    await db.delete(portfolioItems)
+      .where(eq(portfolioItems.userId, userId));
+
+    // Then delete the user
+    await db.delete(users)
+      .where(eq(users.id, userId));
   }
 
   // Asset methods

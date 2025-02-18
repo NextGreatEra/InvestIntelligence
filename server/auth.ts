@@ -91,6 +91,22 @@ export function setupAuth(app: Express) {
         password: hashedPassword,
       });
 
+      // If there's a guest portfolio, transfer it to the new user
+      if (req.session.guestId) {
+        const guestPortfolio = await storage.getPortfolioItemsWithAssets(req.session.guestId);
+        for (const item of guestPortfolio) {
+          await storage.createPortfolioItem({
+            userId: user.id,
+            assetId: item.assetId,
+            rank: item.rank,
+            assetType: item.assetType
+          });
+        }
+        // Clean up guest user data
+        await storage.deleteUser(req.session.guestId);
+        delete req.session.guestId;
+      }
+
       req.login(user, (err) => {
         if (err) return next(err);
         // Return user without password
