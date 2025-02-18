@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
@@ -14,18 +15,18 @@ export default function AuthPage() {
   const { loginMutation, registerMutation, user } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Only redirect if user is logged in and not a guest
-  if (user && !user.isGuest) {
-    setLocation("/");
-    return null;
-  }
+  useEffect(() => {
+    if (user && !user.isGuest) {
+      setLocation("/");
+    }
+  }, [user, setLocation]);
 
   // Only force registration form for guests
   useEffect(() => {
     if (user?.isGuest && isLogin) {
       setIsLogin(false);
     }
-  }, [user?.isGuest]);
+  }, [user?.isGuest, isLogin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
