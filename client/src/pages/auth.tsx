@@ -12,6 +12,7 @@ export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const { loginMutation, registerMutation, user } = useAuth();
   const [, setLocation] = useLocation();
 
@@ -30,6 +31,14 @@ export default function AuthPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isLogin && password !== confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please ensure both passwords are identical",
+        variant: "destructive",
+      });
+      return;
+    }
     const mutation = isLogin ? loginMutation : registerMutation;
     await mutation.mutateAsync({ username, password });
   };
@@ -74,6 +83,18 @@ export default function AuthPage() {
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                </div>
+              )}
               <Button type="submit" className="w-full">
                 {isLogin ? "Sign In" : "Create Account"}
               </Button>
