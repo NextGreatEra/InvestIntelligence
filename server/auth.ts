@@ -88,7 +88,7 @@ export function setupAuth(app: Express) {
   app.post("/api/register", async (req, res, next) => {
     try {
       const existingUser = await storage.getUserByUsername(req.body.username);
-      if (existingUser) {
+      if (existingUser && !existingUser.isGuest) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
@@ -96,6 +96,7 @@ export function setupAuth(app: Express) {
       const user = await storage.createUser({
         ...req.body,
         password: hashedPassword,
+        isGuest: false,
       });
 
       // If there's a guest portfolio, transfer it to the new user
@@ -128,7 +129,7 @@ export function setupAuth(app: Express) {
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", async (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
       if (err) return next(err);
-      if (!user) {
+      if (!user || user.isGuest) {
         return res.status(401).json({ message: info?.message || "Authentication failed" });
       }
 
