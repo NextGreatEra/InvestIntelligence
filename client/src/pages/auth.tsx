@@ -20,10 +20,12 @@ export default function AuthPage() {
     return null;
   }
 
-  // If user is a guest, ensure we show the registration form
-  if (user?.isGuest && isLogin) {
-    setIsLogin(false);
-  }
+  // Only force registration form for guests
+  useEffect(() => {
+    if (user?.isGuest && isLogin) {
+      setIsLogin(false);
+    }
+  }, [user?.isGuest]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

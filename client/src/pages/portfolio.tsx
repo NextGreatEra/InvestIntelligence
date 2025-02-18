@@ -70,7 +70,7 @@ export default function Portfolio() {
   }, []);
 
   const handleAddAsset = useCallback(async (asset: Asset) => {
-    // Create guest user if needed
+    // Create guest user only if needed when adding assets
     if (!user) {
       try {
         const response = await fetch("/api/user?createGuest=true");
@@ -78,11 +78,11 @@ export default function Portfolio() {
           throw new Error('Failed to create guest user');
         }
         const userData = await response.json();
-        setUser(userData);
+        queryClient.setQueryData(['user'], userData);
       } catch (error) {
         console.error("Error creating guest user:", error);
         toast({
-          title: "Error",
+          title: "Error", 
           description: "Failed to create guest user",
           variant: "destructive",
         });

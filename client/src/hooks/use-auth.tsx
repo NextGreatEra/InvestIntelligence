@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<User | null>({
     queryKey: ["user"],
     queryFn: async () => {
-      const res = await fetch("/api/user?createGuest=false");
+      const res = await fetch("/api/user");
       if (!res.ok) {
         if (res.status === 401) return null;
         throw new Error("Failed to fetch user");
