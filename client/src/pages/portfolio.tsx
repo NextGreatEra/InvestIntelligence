@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react"; // Added useEffect
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +18,8 @@ export default function Portfolio() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const { toast } = useToast();
+  const [user, setUser] = useState(null); // Added user state
+  const [portfolioItemsCount, setPortfolioItemsCount] = useState(0); // Added state to track portfolio items
 
   const addAssetMutation = useMutation({
     mutationFn: async (data: {
@@ -49,6 +51,8 @@ export default function Portfolio() {
         title: "Success",
         description: "Asset added to portfolio successfully.",
       });
+      // Update portfolioItemsCount after successful asset addition
+      queryClient.fetchQuery(['/api/portfolio']).then(data => setPortfolioItemsCount(data.length));
     },
     onError: (error: Error) => {
       console.error('Error adding asset:', error);
@@ -65,28 +69,63 @@ export default function Portfolio() {
     setSelectedAsset(asset);
   }, []);
 
-  const handleAddAsset = useCallback(() => {
-    if (!selectedAsset) {
-      toast({
-        title: "Error",
-        description: "Please select an asset first",
-        variant: "destructive",
-      });
-      return;
+  const handleAddAsset = useCallback(async (asset: Asset) => {
+    // Create guest user if needed
+    if (!user) {
+      try {
+        const response = await fetch("/api/user?createGuest=true");
+        if (!response.ok) {
+          throw new Error('Failed to create guest user');
+        }
+        const userData = await response.json();
+        setUser(userData);
+      } catch (error) {
+        console.error("Error creating guest user:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create guest user",
+          variant: "destructive",
+        });
+        return;
+      }
     }
+    await addAssetMutation.mutateAsync(asset);
+  }, [user, toast, addAssetMutation]);
 
-    console.log('Adding asset:', selectedAsset);
-    addAssetMutation.mutate({
-      symbol: selectedAsset.symbol,
-      name: selectedAsset.name,
-      type: selectedAsset.type,
-      currentPrice: selectedAsset.current_price
-    });
-  }, [selectedAsset, toast, addAssetMutation]);
+  useEffect(() => {
+    // Fetch user data on mount
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('/api/user');
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+    fetchUser();
+
+      //Fetch Portfolio Item Count
+    const fetchPortfolioItemCount = async () => {
+      try {
+        const response = await fetch('/api/portfolio');
+        if (response.ok) {
+          const data = await response.json();
+          setPortfolioItemsCount(data.length);
+        }
+      } catch (error) {
+        console.error('Error fetching portfolio item count', error);
+      }
+    }
+    fetchPortfolioItemCount();
+  }, []);
+
 
   return (
     <div className="space-y-6">
-      <AssetList addAssetButton={<AddAssetButton />} /> {/* Added AddAssetButton prop */}
+      <AssetList addAssetButton={<AddAssetButton handleAddAsset={handleAddAsset} handleAssetSelect={handleAssetSelect} portfolioItemsCount={portfolioItemsCount} />} /> {/* Added AddAssetButton prop */}
     </div>
   );
 }

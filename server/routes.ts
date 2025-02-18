@@ -618,8 +618,13 @@ export function registerRoutes(app: Express) {
   });
 
   app.get("/api/user", async (req, res) => {
+    const createGuest = req.query.createGuest !== 'false';
+    
     if (!req.user && !req.session.guestId) {
-      // Create a guest user if none exists
+      if (!createGuest) {
+        return res.json(null);
+      }
+      // Create a guest user if requested
       const guestUser = await storage.createGuestUser();
       req.session.guestId = guestUser.id;
       const { password, ...userWithoutPassword } = guestUser;

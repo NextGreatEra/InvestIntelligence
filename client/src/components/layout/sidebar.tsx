@@ -35,7 +35,7 @@ export default function Sidebar() {
                   onClick={() => window.location.href = '/auth'}
                 >
                   <LogIn className="h-4 w-4" />
-                  Create Account
+                  {user?.isGuest ? 'Create Account' : 'Log in'}
                 </Button>
               ) : (
                 <Button 
@@ -55,7 +55,7 @@ export default function Sidebar() {
               onClick={() => window.location.href = '/auth'}
             >
               <LogIn className="h-4 w-4" />
-              Log in / Create Account
+              Log in
             </Button>
           )}
         </div>
