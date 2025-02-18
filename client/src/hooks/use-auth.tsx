@@ -123,9 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onSuccess: () => {
-      // Reset all queries to handle logout cleanly
       queryClient.resetQueries();
-      // Force a hard refresh to clear all state
       window.location.href = '/';
     },
   });

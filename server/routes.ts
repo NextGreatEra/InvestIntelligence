@@ -618,7 +618,7 @@ export function registerRoutes(app: Express) {
   });
 
   app.get("/api/user", async (req, res) => {
-    const createGuest = req.query.createGuest !== 'false';
+    const createGuest = req.query.createGuest === 'true';
     
     if (!req.user && !req.session.guestId) {
       if (!createGuest) {
