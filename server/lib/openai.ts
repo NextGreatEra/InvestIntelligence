@@ -66,8 +66,7 @@ function generateFallbackInsight(data: MarketData) {
 
     return {
       message,
-      sentiment: "neutral",
-      disclaimer: "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
+      disclaimer: DISCLAIMER
     };
   } catch (error) {
     return {
@@ -140,9 +139,7 @@ export async function generatePortfolioInsight(data: MarketData) {
 
             Structure your response EXACTLY as valid JSON like this example:
             {
-              "message": "Your portfolio's spicier than a Wall Street lunch meeting! BTC up 2% in 24hr while ETH's taking a power nap. Diversification game strong!",
-              "sentiment": "bullish",
-              "disclaimer": "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
+              "message": "Your portfolio's spicier than a Wall Street lunch meeting! BTC up 2% in 24hr while ETH's taking a power nap. Diversification game strong!"
             }`
         },
         {
@@ -174,7 +171,9 @@ export async function generatePortfolioInsight(data: MarketData) {
       max_tokens: 500
     });
 
-    const content = response.choices[0].message.content;
+    const DISCLAIMER = "Not financial advice. Do your own research and consult licensed professionals before making investment decisions.";
+
+const content = response.choices[0].message.content;
     if (!content) {
       console.error("Empty response content from OpenAI");
       return generateFallbackInsight(data);
@@ -182,15 +181,14 @@ export async function generatePortfolioInsight(data: MarketData) {
 
     try {
       const parsedResponse = JSON.parse(content.trim());
-      if (!parsedResponse.message || !parsedResponse.sentiment) {
+      if (!parsedResponse.message) {
         console.error("Invalid response structure:", parsedResponse);
         return generateFallbackInsight(data);
       }
 
       const result = {
         message: parsedResponse.message,
-        sentiment: parsedResponse.sentiment,
-        disclaimer: parsedResponse.disclaimer || "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
+        disclaimer: DISCLAIMER
       };
 
       // Cache the successful response
