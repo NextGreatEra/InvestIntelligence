@@ -100,7 +100,12 @@ export async function generatePortfolioInsight(data: MarketData) {
     const content = (data.persona && personas[data.persona as keyof typeof personas] 
       ? personas[data.persona as keyof typeof personas] + "\n\n"
       : "") +
-      `Your task is to analyze the portfolio and market data to provide a witty insight. 
+      (data.portfolioItems.length === 0 
+      ? `Your task is to encourage the user to start building their portfolio. The market data shows some interesting opportunities.
+      Keep it short (<280 characters), witty, and engaging. Focus on recent price movements in the market data to show what they're missing out on.
+      If there's been a price change of greater than 5% definitely mention it.
+      Be encouraging but not pushy - make them want to join the action.`
+      : `Your task is to analyze the portfolio and market data to provide a witty insight. 
       Keep it short (<280 characters), engaging. make it sound like a human expert - no AI language.
       The portfolio items are sorted by their rank (higher rank = higher allocation).
       If the portfolio is empty, tell the user to add assets to their portfolio or else they will miss out on the action. 
