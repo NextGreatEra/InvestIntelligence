@@ -107,7 +107,7 @@ export async function generatePortfolioInsight(data: MarketData) {
       
       Structure your response EXACTLY as valid JSON like this example:
       {
-        "message": "Market's looking spicy! ETH up 2.28% - time to jump in and start your portfolio! 🚀"
+        "message": "Market's looking spicy! ETH up 2.28% - time to jump in and start your portfolio!"
       }`
       : `Your task is to analyze the portfolio and market data to provide a witty insight. 
       Keep it short (<280 characters), engaging. make it sound like a human expert - no AI language.
