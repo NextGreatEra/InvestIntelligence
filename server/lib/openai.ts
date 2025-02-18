@@ -89,11 +89,11 @@ export async function generatePortfolioInsight(data: MarketData) {
       persona: data.persona
     });
 
-    console.log('[OpenAI] Sending request data:', {
+    console.log('[OpenAI] Sending request data:', JSON.stringify({
       portfolioItems: data.portfolioItems,
       marketAssets: data.marketAssets,
       persona: data.persona
-    });
+    }, null, 2));
 
     // Check cache first
     const cached = insightCache.get(cacheKey);
