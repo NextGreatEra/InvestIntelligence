@@ -29,13 +29,14 @@ export function registerRoutes(app: Express) {
   app.get('/api/portfolio', async (req, res) => {
     try {
       let userId = req.user?.id;
-
-      // If no user, create a guest user
-      if (!userId && !req.session.guestId) {
-        const guestUser = await storage.createGuestUser();
-        req.session.guestId = guestUser.id;
-        userId = guestUser.id;
-      } else if (!userId && req.session.guestId) {
+      
+      if (!userId && req.session.guestId) {
+        userId = req.session.guestId;
+      }
+      
+      if (!userId) {
+        return res.json([]);
+      }
         userId = req.session.guestId;
       }
       const portfolioItems = await storage.getPortfolioItemsWithAssets(userId);

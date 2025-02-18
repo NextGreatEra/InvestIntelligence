@@ -96,7 +96,7 @@ export default function Portfolio() {
     // Fetch user data on mount
     const fetchUser = async () => {
       try {
-        const response = await fetch('/api/user');
+        const response = await fetch('/api/user?createGuest=false');
         if (response.ok) {
           const data = await response.json();
           setUser(data);
