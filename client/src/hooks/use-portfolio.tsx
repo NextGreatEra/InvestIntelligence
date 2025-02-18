@@ -16,13 +16,15 @@ export function usePortfolio() {
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     queryFn: async () => {
-      if (!user) {
-        const localItems = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]");
-        return localItems;
-      }
       const res = await fetch("/api/portfolio");
       if (!res.ok) throw new Error("Failed to fetch portfolio");
-      return res.json();
+      const data = await res.json();
+      // If user is not logged in, merge with localStorage
+      if (!user) {
+        const localItems = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || "[]");
+        return [...data, ...localItems];
+      }
+      return data;
     }
   });
 
