@@ -1,3 +1,4 @@
+
 import OpenAI from "openai";
 
 if (!process.env.OPENAI_API_KEY) {
@@ -9,6 +10,7 @@ const ai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // Simple in-memory cache for insights
 const insightCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const DISCLAIMER = "Not financial advice. Do your own research and consult licensed professionals before making investment decisions.";
 
 interface MarketData {
   portfolioItems: any[];
@@ -95,8 +97,6 @@ export async function generatePortfolioInsight(data: MarketData) {
     }, null, 2));
 
     // DO NOT DELETE - Logging OpenAI instructions
-    const DISCLAIMER = "Not financial advice. Do your own research and consult licensed professionals before making investment decisions.";
-    
     const content = (data.persona && personas[data.persona as keyof typeof personas] 
       ? personas[data.persona as keyof typeof personas] + "\n\n"
       : "") +
@@ -108,7 +108,12 @@ export async function generatePortfolioInsight(data: MarketData) {
       Mention timeframes for price changes (e.g., 'in the last 24hr').
       Occasionally comment on portfolio diversity and point out any standout performers.
       Be honest about losses - don't hype up negative performance.
-      Always reference assets by their ticker or company name, not ID number.`;
+      Always reference assets by their ticker or company name, not ID number.
+
+      Structure your response EXACTLY as valid JSON like this example:
+      {
+        "message": "Your portfolio's spicier than a Wall Street lunch meeting! BTC up 2% in 24hr while ETH's taking a power nap. Diversification game strong!"
+      }`;
 
     console.log('[OpenAI] System Instructions:', content);
 
@@ -132,23 +137,7 @@ export async function generatePortfolioInsight(data: MarketData) {
       messages: [
         {
           role: "system",
-          content: (data.persona && personas[data.persona as keyof typeof personas] 
-            ? personas[data.persona as keyof typeof personas] + "\n\n"
-            : "") +
-            `Your task is to analyze the portfolio and market data to provide a witty insight. 
-            Keep it short (under 280 characters), engaging, and make it sound like a human expert - no AI language.
-            The portfolio items are sorted by their rank which indicates their allocation importance (higher rank = higher allocation).
-            Focus on things the user might not know if they have not been paying attention to the market.
-            If there's been a price change of greater than 5% it's probably worth mentioning, if the price change is 10% or greater definitely mention it, if the price change is over 15% yell about it.  
-            Mention timeframes for price changes (e.g., 'in the last 24hr').
-            Occasionally comment on portfolio diversity and point out any standout performers.
-            Be honest about losses - don't hype up negative performance.
-            Always reference assets by their ticker or company name, not ID number.
-
-            Structure your response EXACTLY as valid JSON like this example:
-            {
-              "message": "Your portfolio's spicier than a Wall Street lunch meeting! BTC up 2% in 24hr while ETH's taking a power nap. Diversification game strong!"
-            }`
+          content
         },
         {
           role: "user",
@@ -158,7 +147,7 @@ export async function generatePortfolioInsight(data: MarketData) {
               .map(item => ({
                 symbol: item.symbol,
                 type: item.type,
-                rank: item.rank || 0, // Higher rank = higher allocation/importance
+                rank: item.rank || 0,
                 price: Number(item.currentPrice?.toFixed(2)),
                 changes: Object.fromEntries(
                   Object.entries(item.percentChange || {})
@@ -187,13 +176,13 @@ export async function generatePortfolioInsight(data: MarketData) {
     });
 
     const responseContent = response.choices[0].message.content;
-    if (!content) {
+    if (!responseContent) {
       console.error("Empty response content from OpenAI");
       return generateFallbackInsight(data);
     }
 
     try {
-      const parsedResponse = JSON.parse(content.trim());
+      const parsedResponse = JSON.parse(responseContent.trim());
       if (!parsedResponse.message) {
         console.error("Invalid response structure:", parsedResponse);
         return generateFallbackInsight(data);
@@ -209,7 +198,7 @@ export async function generatePortfolioInsight(data: MarketData) {
       return result;
 
     } catch (parseError) {
-      console.error("Failed to parse OpenAI response:", content);
+      console.error("Failed to parse OpenAI response:", responseContent);
       return generateFallbackInsight(data);
     }
   } catch (error) {
