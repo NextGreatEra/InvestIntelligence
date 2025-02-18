@@ -71,8 +71,7 @@ function generateFallbackInsight(data: MarketData) {
   } catch (error) {
     return {
       message: "Markets are moving! Detailed analysis coming soon.",
-      sentiment: "neutral",
-      disclaimer: "Not financial advice. Do your own research and consult licensed professionals before making investment decisions."
+      disclaimer: DISCLAIMER
     };
   }
 }
