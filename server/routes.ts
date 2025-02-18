@@ -81,7 +81,7 @@ export function registerRoutes(app: Express) {
   app.get('/api/portfolio/insight', async (req, res) => {
     try {
       const persona = req.query.persona as string;
-      const userId = req.user?.id; // Optional user ID
+      const userId = req.user?.id || req.session.guestId; // Include guest ID
 
       // Fetch both portfolio items and market data
       const [portfolioItems, marketAssets] = await Promise.all([
