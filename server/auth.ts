@@ -119,17 +119,38 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
+    passport.authenticate("local", async (err: Error | null, user: Express.User | false, info: { message: string } | undefined) => {
       if (err) return next(err);
       if (!user) {
         return res.status(401).json({ message: info?.message || "Authentication failed" });
       }
-      req.login(user, (err) => {
-        if (err) return next(err);
-        // Return user without password
-        const { password, ...userWithoutPassword } = user;
-        res.json(userWithoutPassword);
-      });
+
+      try {
+        // If there's a guest portfolio, transfer it to the authenticated user
+        if (req.session.guestId) {
+          const guestPortfolio = await storage.getPortfolioItemsWithAssets(req.session.guestId);
+          for (const item of guestPortfolio) {
+            await storage.createPortfolioItem({
+              userId: user.id,
+              assetId: item.assetId,
+              rank: item.rank,
+              assetType: item.assetType
+            });
+          }
+          // Clean up guest user data
+          await storage.deleteUser(req.session.guestId);
+          delete req.session.guestId;
+        }
+
+        req.login(user, (err) => {
+          if (err) return next(err);
+          // Return user without password
+          const { password, ...userWithoutPassword } = user;
+          res.json(userWithoutPassword);
+        });
+      } catch (error) {
+        next(error);
+      }
     })(req, res, next);
   });
 
