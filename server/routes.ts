@@ -236,13 +236,10 @@ export function registerRoutes(app: Express) {
         throw new Error('Invalid asset type');
       }
 
-      // Create or get guest user if not authenticated
-      let userId;
-      if (!req.user) {
-        const guestUser = await storage.createGuestUser();
-        userId = guestUser.id;
-      } else {
-        userId = req.user.id;
+      // Use existing guest ID from session or authenticated user ID
+      const userId = req.user?.id || req.session.guestId;
+      if (!userId) {
+        throw new Error('No user ID found');
       }
 
       // Create portfolio item
