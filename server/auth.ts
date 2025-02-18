@@ -124,12 +124,5 @@ export function setupAuth(app: Express) {
     });
   });
 
-  app.get("/api/user", (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    // Return user without password
-    const { password, ...userWithoutPassword } = req.user;
-    res.json(userWithoutPassword);
-  });
+  // User endpoint moved to routes.ts
 }
