@@ -29,7 +29,7 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
-  
+
   const {
     data: user,
     error,
@@ -38,10 +38,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: async () => {
       const res = await fetch("/api/user");
-      if (res.status === 401) return null;
-      if (!res.ok) throw new Error("Failed to fetch user");
+      if (res.status === 401) return null; //Explicitly handle 401 Unauthorized
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to fetch user");
+      }
       return res.json();
     },
+    onError: (err) => {
+      // Handle errors during user data fetching.  Could be improved with more specific error handling
+      console.error("Error fetching user data:", err);
+      toast({ title: "Error", description: "Could not fetch user data", variant: "destructive" });
+    }
   });
 
   const loginMutation = useMutation({
@@ -50,10 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
+        credentials: 'include' //Important for session management
       });
+
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.message || "Login failed");
+        throw new Error(error.message || "Invalid username or password");
       }
       return res.json();
     },
@@ -63,6 +73,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: error.message,
         variant: "destructive",
       });
+      // Clear user data on login failure
+      //This is crucial to avoid stale data issues
     },
     onSuccess: () => {
       window.location.reload();
