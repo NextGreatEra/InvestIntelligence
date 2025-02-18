@@ -164,19 +164,21 @@ export function registerRoutes(app: Express) {
       const { generatePortfolioInsight } = await import('./lib/openai');
 
       const dataForAI = {
-        portfolioItems: enrichedPortfolioItems.filter(item => item !== null), //Filter out nulls
-        marketAssets,
+        portfolioItems: enrichedPortfolioItems
+          .filter(item => item !== null)
+          .map(({ id, description, ...item }) => item), //Filter out id and description
+        marketAssets: marketAssets.map(({ id, description, ...asset }) => asset),
         marketSummary: {
-          totalAssets: enrichedPortfolioItems.filter(item => item !== null).length, //Filter out nulls
+          totalAssets: enrichedPortfolioItems.filter(item => item !== null).length,
           assetTypes: {
-            crypto: enrichedPortfolioItems.filter(item => item?.type === 'crypto').length, //Handle potential null
-            stocks: enrichedPortfolioItems.filter(item => item?.type === 'stock').length //Handle potential null
+            crypto: enrichedPortfolioItems.filter(item => item?.type === 'crypto').length,
+            stocks: enrichedPortfolioItems.filter(item => item?.type === 'stock').length
           },
           topMovers: marketAssets
             .filter(asset => asset.percent_change_24h != null)
             .sort((a, b) => Math.abs(b.percent_change_24h || 0) - Math.abs(a.percent_change_24h || 0))
             .slice(0, 3)
-            .map(asset => ({
+            .map(({ id, description, ...asset }) => ({
               symbol: asset.symbol,
               change24h: asset.percent_change_24h || 0
             }))
