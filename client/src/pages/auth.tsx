@@ -14,8 +14,8 @@ export default function AuthPage() {
   const { loginMutation, registerMutation, user } = useAuth();
   const [, setLocation] = useLocation();
 
-  // If user is logged in, redirect to dashboard
-  if (user) {
+  // Only redirect if user is logged in and not a guest
+  if (user && !user.isGuest) {
     setLocation("/");
     return null;
   }
@@ -32,11 +32,17 @@ export default function AuthPage() {
       <div className="flex-1 flex items-center justify-center p-6 bg-background">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>{isLogin ? "Welcome Back" : "Create Account"}</CardTitle>
+            <CardTitle>
+              {user?.isGuest 
+                ? "Create Account" 
+                : (isLogin ? "Welcome Back" : "Create Account")}
+            </CardTitle>
             <CardDescription>
-              {isLogin
-                ? "Sign in to access your portfolio"
-                : "Sign up to start tracking your investments"}
+              {user?.isGuest
+                ? "Create an account to save your portfolio"
+                : (isLogin
+                  ? "Sign in to access your portfolio"
+                  : "Sign up to start tracking your investments")}
             </CardDescription>
           </CardHeader>
           <CardContent>
