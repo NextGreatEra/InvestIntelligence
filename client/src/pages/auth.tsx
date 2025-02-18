@@ -20,6 +20,11 @@ export default function AuthPage() {
     return null;
   }
 
+  // If user is a guest, ensure we show the registration form
+  if (user?.isGuest && isLogin) {
+    setIsLogin(false);
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const mutation = isLogin ? loginMutation : registerMutation;
