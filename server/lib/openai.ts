@@ -119,6 +119,10 @@ export async function generatePortfolioInsight(data: MarketData) {
       throw new Error('Invalid data structure: portfolioItems and marketAssets must be arrays');
     }
 
+    // Filter out market assets already in portfolio
+    const portfolioSymbols = new Set(data.portfolioItems.map(item => item.symbol));
+    const marketData = data.marketAssets.filter(asset => !portfolioSymbols.has(asset.symbol));
+
     const response = await ai.chat.completions.create({
       model: "gpt-4",
       messages: [
@@ -144,24 +148,31 @@ export async function generatePortfolioInsight(data: MarketData) {
         {
           role: "user",
           content: JSON.stringify({
-            portfolio: data.portfolioItems.map(item => ({
-              symbol: item.symbol,
-              type: item.type,
-              currentPrice: item.currentPrice,
-              changes: item.percentChange
-            })),
-            market: data.marketAssets.map(asset => ({
+            portfolio: data.portfolioItems
+              .sort((a, b) => (a.rank || 0) - (b.rank || 0))
+              .map(item => ({
+                symbol: item.symbol,
+                type: item.type,
+                rank: item.rank || 0,
+                price: Number(item.currentPrice?.toFixed(2)),
+                changes: Object.fromEntries(
+                  Object.entries(item.percentChange || {})
+                    .map(([k, v]) => [k, Number(v?.toFixed(2))])
+                )
+              })),
+            market: marketData.map(asset => ({
               symbol: asset.symbol,
-              name: asset.name,
-              current_price: asset.current_price,
-              changes: asset.type === 'crypto' ? {
-                '1h': asset.percent_change_1h,
-                '24h': asset.percent_change_24h,
-                '7d': asset.percent_change_7d
-              } : {
-                '24h': asset.percent_change_24h
-              },
-              type: asset.type
+              type: asset.type,
+              price: Number(asset.current_price?.toFixed(2)),
+              changes: asset.type === 'crypto' 
+                ? {
+                    '1h': Number(asset.percent_change_1h?.toFixed(2)),
+                    '24h': Number(asset.percent_change_24h?.toFixed(2)),
+                    '7d': Number(asset.percent_change_7d?.toFixed(2))
+                  }
+                : {
+                    '24h': Number(asset.percent_change_24h?.toFixed(2))
+                  }
             }))
           })
         }
