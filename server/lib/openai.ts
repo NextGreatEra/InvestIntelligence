@@ -99,14 +99,7 @@ export async function generatePortfolioInsight(data: MarketData) {
       (data.persona && personas[data.persona as keyof typeof personas] 
         ? personas[data.persona as keyof typeof personas] + "\n\n"
         : "") +
-      `Your task is to analyze the portfolio and market data to provide a witty insight. 
-      Keep it short (under 280 characters), engaging, and make it sound like a human expert - no AI language.
-      Focus on things the user might not know if they have not been paying attention to the market.
-      If there's been a price change of greater than 5% it's probably worth mentioning, if the price change is 10% or greater definitely mention it, if the price change is over 15% yell about it.  
-      Mention timeframes for price changes (e.g., 'in the last 24hr').
-      Occasionally comment on portfolio diversity and point out any standout performers.
-      Be honest about losses - don't hype up negative performance.`
-    );
+      content); // Log the actual content being sent to OpenAI
 
     // Check cache first
     const cached = insightCache.get(cacheKey);
