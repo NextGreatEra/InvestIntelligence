@@ -37,8 +37,6 @@ export function registerRoutes(app: Express) {
       if (!userId) {
         return res.json([]);
       }
-        userId = req.session.guestId;
-      }
       const portfolioItems = await storage.getPortfolioItemsWithAssets(userId);
       const enrichedItems = await Promise.all(
         portfolioItems.map(async (item) => {
