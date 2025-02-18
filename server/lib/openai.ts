@@ -119,7 +119,7 @@ export async function generatePortfolioInsight(data: MarketData) {
       Structure your response EXACTLY as valid JSON like this example:
       {
         "message": "Your portfolio's spicier than a Wall Street lunch meeting! BTC up 2% in 24hr while ETH's taking a power nap. Diversification game strong!"
-      }`;
+      }`);
 
     console.log('[OpenAI] System Instructions:', content);
 
