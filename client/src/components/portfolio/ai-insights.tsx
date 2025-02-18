@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
@@ -27,7 +26,7 @@ const personas = {
 
 type PersonaKey = keyof typeof personas;
 
-export default function AiCommentary() {
+export default function AiInsights() {
   const [selectedPersona, setSelectedPersona] = useState<PersonaKey>("default");
 
   const { data: insight, isLoading, refetch } = useQuery<InsightResponse>({
@@ -42,7 +41,7 @@ export default function AiCommentary() {
   return (
     <Card className="h-fit">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle>AI Commentary</CardTitle>
+        <CardTitle>AI Insights</CardTitle>
         <Select
           value={selectedPersona}
           onValueChange={(value: PersonaKey) => {

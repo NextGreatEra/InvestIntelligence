@@ -1,4 +1,4 @@
-import AiCommentary from "@/components/portfolio/ai-insights";
+import AiInsights from "@/components/portfolio/ai-insights";
 import AssetList from "@/components/portfolio/asset-list";
 import Markets from "@/components/portfolio/markets";
 import PriceChart from "@/components/portfolio/price-chart";
