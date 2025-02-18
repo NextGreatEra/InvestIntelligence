@@ -133,6 +133,7 @@ export async function generatePortfolioInsight(data: MarketData) {
             : "") +
             `Your task is to analyze the portfolio and market data to provide a witty insight. 
             Keep it short (under 280 characters), engaging, and make it sound like a human expert - no AI language.
+            The portfolio items are sorted by their rank which indicates their allocation importance (higher rank = higher allocation).
             Focus on things the user might not know if they have not been paying attention to the market.
             If there's been a price change of greater than 5% it's probably worth mentioning, if the price change is 10% or greater definitely mention it, if the price change is over 15% yell about it.  
             Mention timeframes for price changes (e.g., 'in the last 24hr').
@@ -153,7 +154,7 @@ export async function generatePortfolioInsight(data: MarketData) {
               .map(item => ({
                 symbol: item.symbol,
                 type: item.type,
-                rank: item.rank || 0,
+                rank: item.rank || 0, // Higher rank = higher allocation/importance
                 price: Number(item.currentPrice?.toFixed(2)),
                 changes: Object.fromEntries(
                   Object.entries(item.percentChange || {})
