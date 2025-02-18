@@ -29,14 +29,24 @@ export default function Sidebar() {
                 Welcome, {user.username}
               </p>
               {user.isGuest ? (
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start gap-2"
-                  onClick={() => window.location.href = '/auth'}
-                >
-                  <LogIn className="h-4 w-4" />
-                  {user?.isGuest ? 'Create Account' : 'Log in'}
-                </Button>
+                <div className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start gap-2"
+                    onClick={() => window.location.href = '/auth'}
+                  >
+                    <LogIn className="h-4 w-4" />
+                    Create Account
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start gap-2"
+                    onClick={() => logoutMutation.mutate()}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Log out as guest
+                  </Button>
+                </div>
               ) : (
                 <Button 
                   variant="outline" 
