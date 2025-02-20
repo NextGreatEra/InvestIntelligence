@@ -74,13 +74,13 @@ export default function Markets() {
         {data.map((market) => (
           <div
             key={market.id}
-            className="flex items-center justify-between p-4 rounded-lg bg-card border"
+            className="flex flex-col sm:flex-row items-center justify-between p-4 rounded-lg bg-card border" //Added flex-col and sm:flex-row for better mobile layout
           >
             <div>
               <h3 className="font-medium">{market.symbol}</h3>
               <p className="text-sm text-muted-foreground">{market.name}</p>
             </div>
-            <div className="text-right">
+            <div className="text-right mt-4 sm:mt-0"> {/* Added spacing for mobile */}
               <p className="font-medium">
                 ${market.current_price.toLocaleString()}
               </p>
