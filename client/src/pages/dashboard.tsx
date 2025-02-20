@@ -31,17 +31,15 @@ export default function Dashboard() {
         }
       });
 
-      // Clear server-side cache by adding timestamp parameter
-      const timestamp = Date.now();
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/markets"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] }),
-        fetch(`/api/portfolio/insight?t=${timestamp}`, { method: 'POST' })
+        fetch('/api/portfolio/insight/clear-cache', { method: 'POST' })
       ]);
-      // Force immediate refetch of insights
-      await queryClient.invalidateQueries({ 
+      
+      await queryClient.refetchQueries({ 
         queryKey: ["/api/portfolio/insight"],
-        refetchType: 'active'
+        exact: false
       });
     } catch (error) {
       console.error("Failed to refresh data:", error);
