@@ -5,7 +5,7 @@ import { setupAuth } from "./auth";
 
 // Middleware to ensure user is authenticated
 function requireAuth(req: any, res: any, next: any) {
-  if (!req.isAuthenticated()) {
+  if (!req.isAuthenticated() && !req.session.guestId) {
     return res.status(401).json({ 
       message: "Please create an account to save your portfolio changes",
       code: "AUTH_REQUIRED"
