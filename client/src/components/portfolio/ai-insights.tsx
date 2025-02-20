@@ -39,7 +39,11 @@ export default function AiCommentary() {
     queryKey: ["/api/portfolio/insight", selectedPersona],
     queryFn: async () => {
       const timestamp = Date.now();
-      const response = await fetch(`/api/portfolio/insight${selectedPersona !== "default" ? `?persona=${selectedPersona}` : ''}&t=${timestamp}`);
+      const params = new URLSearchParams({ t: timestamp.toString() });
+      if (selectedPersona !== "default") {
+        params.append("persona", selectedPersona);
+      }
+      const response = await fetch(`/api/portfolio/insight?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch insights');
       }
