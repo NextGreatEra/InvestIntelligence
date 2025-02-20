@@ -79,9 +79,16 @@ export function registerRoutes(app: Express) {
   });
 
   app.post('/api/portfolio/insight/clear-cache', async (req, res) => {
-    const { insightCache } = await import('./lib/openai');
-    insightCache.clear();
-    res.json({ success: true });
+    try {
+      const openai = await import('./lib/openai');
+      if (openai.insightCache && typeof openai.insightCache.clear === 'function') {
+        openai.insightCache.clear();
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error clearing insight cache:', error);
+      res.json({ success: false });
+    }
   });
 
   app.get('/api/portfolio/insight', async (req, res) => {
