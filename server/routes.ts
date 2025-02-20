@@ -29,11 +29,11 @@ export function registerRoutes(app: Express) {
   app.get('/api/portfolio', async (req, res) => {
     try {
       let userId = req.user?.id;
-      
+
       if (!userId && req.session.guestId) {
         userId = req.session.guestId;
       }
-      
+
       if (!userId) {
         return res.json([]);
       }
@@ -251,7 +251,7 @@ export function registerRoutes(app: Express) {
       }
 
       let userId = req.user?.id || req.session.guestId;
-      
+
       // Create guest user if no user exists
       if (!userId) {
         const guestUser = await storage.createGuestUser();
@@ -396,8 +396,9 @@ export function registerRoutes(app: Express) {
       // Combine results
       let results = [...formattedStockResults, ...formattedCryptoResults];
 
-      // If no results found and the query looks like a stock symbol (uppercase, 1-5 chars)
-      if (results.length === 0 && /^[A-Z]{1,5}$/.test(q.toUpperCase())) {
+      // Try Finnhub if no exact match and query looks like a stock ticker
+      const hasExactMatch = results.some(r => r.symbol.toLowerCase() === q.toLowerCase());
+      if (!hasExactMatch && /^[A-Z]{1,5}$/.test(q.toUpperCase())) {
         try {
           const { getStockPrice } = await import('./lib/finnhub');
           const { price, priceChange } = await getStockPrice(q.toUpperCase());
@@ -650,7 +651,7 @@ export function registerRoutes(app: Express) {
 
   app.get("/api/user", async (req, res) => {
     const createGuest = req.query.createGuest === 'true';
-    
+
     if (!req.user && !req.session.guestId) {
       if (!createGuest) {
         return res.json(null);
