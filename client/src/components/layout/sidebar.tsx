@@ -1,7 +1,10 @@
+
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Briefcase, LineChart, Settings, LogIn, LogOut } from "lucide-react";
+import { LayoutDashboard, Briefcase, LineChart, Settings, LogIn, LogOut, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -14,14 +17,14 @@ const navigation = [
 export default function Sidebar() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
+  const isMobile = useIsMobile();
 
-  return (
-    <div className="flex h-full w-64 flex-col bg-sidebar border-r border-border">
+  const sidebarContent = (
+    <div className="flex h-full flex-col bg-sidebar">
       <div className="flex h-14 items-center border-b border-border px-4">
         <h1 className="text-xl font-bold text-sidebar-foreground">Portfolio AI</h1>
       </div>
       <nav className="flex-1 space-y-1 px-2 py-4">
-        {/* User auth status */}
         <div className="px-3 py-2">
           {user ? (
             <div className="space-y-2">
@@ -88,6 +91,27 @@ export default function Sidebar() {
           );
         })}
       </nav>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-40">
+            <Menu className="h-5 w-5" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="w-[85vw] p-0">
+          {sidebarContent}
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <div className="hidden md:block w-64 border-r border-border">
+      {sidebarContent}
     </div>
   );
 }
