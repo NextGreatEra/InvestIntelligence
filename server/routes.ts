@@ -78,6 +78,12 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  app.post('/api/portfolio/insight', async (req, res) => {
+    // Clear the OpenAI cache
+    insightCache.clear();
+    res.json({ success: true });
+  });
+
   app.get('/api/portfolio/insight', async (req, res) => {
     try {
       const persona = req.query.persona as string;
