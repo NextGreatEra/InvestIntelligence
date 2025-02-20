@@ -13,6 +13,7 @@ export default function AuthPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [email, setEmail] = useState("");
   const { loginMutation, registerMutation, user } = useAuth();
   const [, setLocation] = useLocation();
 
@@ -40,7 +41,7 @@ export default function AuthPage() {
       return;
     }
     const mutation = isLogin ? loginMutation : registerMutation;
-    await mutation.mutateAsync({ username, password });
+    await mutation.mutateAsync({ username, password, email });
   };
 
   return (
@@ -84,16 +85,28 @@ export default function AuthPage() {
                 />
               </div>
               {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                  />
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email (optional)</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                </>
               )}
               <Button type="submit" className="w-full">
                 {isLogin ? "Sign In" : "Create Account"}
