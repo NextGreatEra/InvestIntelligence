@@ -396,9 +396,8 @@ export function registerRoutes(app: Express) {
       // Combine results
       let results = [...formattedStockResults, ...formattedCryptoResults];
 
-      // Try Finnhub if no exact match and query looks like a stock ticker
-      const hasExactMatch = results.some(r => r.symbol.toLowerCase() === q.toLowerCase());
-      if (!hasExactMatch && /^[A-Z]{1,5}$/.test(q.toUpperCase())) {
+      // Try Finnhub for potential stock symbols, even with partial matches
+      if (/^[A-Z]{1,5}$/.test(q.toUpperCase())) {
         try {
           const { getStockPrice } = await import('./lib/finnhub');
           const { price, priceChange } = await getStockPrice(q.toUpperCase());
