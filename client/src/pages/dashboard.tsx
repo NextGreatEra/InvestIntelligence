@@ -35,8 +35,14 @@ export default function Dashboard() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["/api/markets"] }),
         queryClient.invalidateQueries({ queryKey: ["/api/portfolio"] }),
-        queryClient.invalidateQueries({ queryKey: ["/api/portfolio/insight"] })
+        // Force a fresh insight by invalidating and refetching with timestamp
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/portfolio/insight"],
+          refetchType: 'all'
+        })
       ]);
+      // Force cache clear for insights
+      queryClient.removeQueries({ queryKey: ["/api/portfolio/insight"] });
     } catch (error) {
       console.error("Failed to refresh data:", error);
     } finally {

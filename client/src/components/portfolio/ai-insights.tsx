@@ -34,7 +34,7 @@ export default function AiCommentary() {
   });
 
   const { data: insight, isLoading, refetch } = useQuery<InsightResponse>({
-    queryKey: ["/api/portfolio/insight", selectedPersona],
+    queryKey: ["/api/portfolio/insight", selectedPersona, Date.now()],
     queryFn: async () => {
       const response = await fetch(`/api/portfolio/insight${selectedPersona !== "default" ? `?persona=${selectedPersona}` : ''}`);
       if (!response.ok) throw new Error('Failed to fetch insights');
