@@ -98,31 +98,32 @@ export async function searchStocks(query: string): Promise<Partial<InsertAsset>[
         const description = result.description.toLowerCase();
         const searchQuery = query.toLowerCase().trim();
 
-        // Only include stocks from major US exchanges (no extension in symbol)
-        // Allow both stocks and ETFs (but exclude other extensions)
-        if (symbol.includes('.') && !symbol.endsWith('.ETF')) return false;
+        // Allow stocks and ETFs, exclude other types of securities
+        if (symbol.includes('.') && 
+            !symbol.endsWith('.ETF') && 
+            result.type !== 'ETP' && 
+            result.type !== 'ETF') return false;
 
-        // Check for company name matches first
-        if (description.includes(searchQuery)) {
-          console.log(`Company name match: ${result.symbol} (${result.description})`);
-          return true;
-        }
+        const exactSymbolMatch = symbol === searchQuery;
+        const symbolStartMatch = symbol.startsWith(searchQuery);
+        const descriptionMatch = description.includes(searchQuery);
+        const partialSymbolMatch = symbol.includes(searchQuery);
 
-        // Check for exact symbol match
-        if (symbol === searchQuery) {
+        // Prioritize exact matches
+        if (exactSymbolMatch) {
           console.log(`Exact symbol match: ${result.symbol}`);
           return true;
         }
 
-        // Check if symbol starts with search query
-        if (symbol.startsWith(searchQuery)) {
+        // Then prefix matches
+        if (symbolStartMatch) {
           console.log(`Symbol prefix match: ${result.symbol}`);
           return true;
         }
 
-        // Check for partial symbol matches last
-        if (symbol.includes(searchQuery)) {
-          console.log(`Partial symbol match: ${result.symbol}`);
+        // Then description and partial matches
+        if (descriptionMatch || partialSymbolMatch) {
+          console.log(`Match found for ${result.symbol}: ${descriptionMatch ? 'description' : 'partial symbol'}`);
           return true;
         }
 
