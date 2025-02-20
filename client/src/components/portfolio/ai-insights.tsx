@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
+import { usePortfolio } from "@/hooks/use-portfolio";
 
 interface InsightResponse {
   message: string;
@@ -28,21 +29,25 @@ const personas = {
 type PersonaKey = keyof typeof personas;
 
 export default function AiCommentary() {
+  const { portfolio } = usePortfolio();
   const [selectedPersona, setSelectedPersona] = useState<PersonaKey>(() => {
     const saved = localStorage.getItem('aiCommentaryPersona');
     return (saved as PersonaKey) || "default";
   });
 
-  const { data: insight, isLoading, refetch } = useQuery<InsightResponse>({
+  const { data: insight, isLoading, error, refetch } = useQuery<InsightResponse>({
     queryKey: ["/api/portfolio/insight", selectedPersona],
     queryFn: async () => {
       const timestamp = Date.now();
       const response = await fetch(`/api/portfolio/insight${selectedPersona !== "default" ? `?persona=${selectedPersona}` : ''}&t=${timestamp}`);
-      if (!response.ok) throw new Error('Failed to fetch insights');
+      if (!response.ok) {
+        throw new Error('Failed to fetch insights');
+      }
       return response.json();
     },
-    staleTime: 0,
-    cacheTime: 0
+    staleTime: 300000, // 5 minutes
+    retry: 2,
+    enabled: true // Always enabled to ensure insights load for new users
   });
 
   return (
@@ -74,10 +79,14 @@ export default function AiCommentary() {
           <div className="flex items-center justify-center p-4">
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
+        ) : error ? (
+          <div className="text-destructive">
+            <p>Failed to load insights. Trying again...</p>
+          </div>
         ) : (
           <div className="space-y-4">
             <div>
-              {typeof insight?.message === 'string' ? (
+              {insight?.message ? (
                 <p className="text-lg font-medium">{insight.message}</p>
               ) : (
                 <p className="text-lg font-medium">Loading insights...</p>
